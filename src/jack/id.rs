@@ -11,7 +11,22 @@ pub struct Id(String);
 
 impl Id {
     pub fn new(value: String) -> Self {
+        if Keyword::is_reserved(value.as_str()) {
+            panic!("Id is reserved keyword: {}", value.as_str());
+        }
         Self(value)
+    }
+
+    fn new_internal(value: String) -> Self {
+        Self(value)
+    }
+
+    pub fn try_new<'a>(value: &'a str) -> Result<Id, &'a str> {
+        if Keyword::is_reserved(value) {
+            Err(value)
+        } else {
+            Ok(Self::new_internal(value.to_owned()))
+        }
     }
 
     pub fn copy(&self) -> Self {
@@ -32,8 +47,8 @@ impl Id {
 }
 
 impl From<&str> for Id {
-    fn from(item: &str) -> Self {
-        Self::new(item.to_owned())
+    fn from(value: &str) -> Self {
+        Self::new(value.to_owned())
     }
 }
 

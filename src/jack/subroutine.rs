@@ -442,6 +442,10 @@ impl SubroutineDec {
         }
     }
 
+    pub fn name<'a>(&'a self) -> &'a Id {
+        &self.name
+    }
+
     pub fn kind<'a>(&'a self) -> &'a SubroutineKind {
         &self.kind
     }

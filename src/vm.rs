@@ -769,17 +769,17 @@ impl Bootstrapper {
                 vec![]
             },
             if self.counter.eq > 0 {
-                self.init_cmp("BEGIN_EQ", "END_EQ", Jump::JNE)
+                self.init_cmp("BEGIN_EQ", "END_EQ", Jump::Jne)
             } else {
                 Vec::new()
             },
             if self.counter.gt > 0 {
-                self.init_cmp("BEGIN_GT", "END_GT", Jump::JLE)
+                self.init_cmp("BEGIN_GT", "END_GT", Jump::Jle)
             } else {
                 Vec::new()
             },
             if self.counter.lt > 0 {
-                self.init_cmp("BEGIN_LT", "END_LT", Jump::JGE)
+                self.init_cmp("BEGIN_LT", "END_LT", Jump::Jge)
             } else {
                 Vec::new()
             },

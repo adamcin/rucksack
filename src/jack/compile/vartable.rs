@@ -85,6 +85,14 @@ impl ClassVarTable {
         self.n_static = self.n_static + 1;
         Ok(())
     }
+
+    pub fn var_count(&self, kind: VarKind) -> usize {
+        match kind {
+            VarKind::Field => self.n_field,
+            VarKind::Static => self.n_static,
+            _ => 0,
+        }
+    }
 }
 
 impl TryFrom<&Class> for ClassVarTable {
@@ -185,6 +193,14 @@ impl<'a> SubVarTable<'a> {
         self.n_local = self.n_local + 1;
         Ok(())
     }
+
+    pub fn var_count(&self, kind: VarKind) -> usize {
+        match kind {
+            VarKind::Arg => self.n_arg,
+            VarKind::Local => self.n_local,
+            _ => self.class_vars.var_count(kind),
+        }
+    }
 }
 
 impl<'a, 'b> TryFrom<(&'a ClassVarTable, &SubroutineDec)> for SubVarTable<'b>
@@ -195,10 +211,9 @@ where
     fn try_from(value: (&'a ClassVarTable, &SubroutineDec)) -> Result<Self, Self::Error> {
         let (class_vars, sub) = value;
         let mut sub_vars = SubVarTable::new(class_vars);
-        match sub.kind() {
-            SubroutineKind::Method => sub_vars.add_this()?,
-            _ => {}
-        };
+        if matches!(sub.kind(), SubroutineKind::Method) {
+            sub_vars.add_this()?;
+        }
         for var in sub.params() {
             sub_vars.add_arg(var.var_name(), var.var_type().copy())?;
         }
@@ -213,10 +228,12 @@ where
 
 #[cfg(test)]
 mod tests {
+    use std::convert::TryInto;
+
     use crate::jack::{
         common::testutil::read_class,
         compile::{
-            vartable::{Var, VarKind},
+            vartable::{SubVarTable, Var, VarKind},
             CompileError,
         },
         id::Id,
@@ -226,12 +243,16 @@ mod tests {
     use super::ClassVarTable;
 
     #[test]
-    fn from_class() {
+    fn try_from_square_game() {
         let class = read_class("data/11/Square/SquareGame.jack").expect("");
         let r_class_vars: Result<ClassVarTable, CompileError> = (&class).try_into();
         assert!(r_class_vars.is_ok());
         if let Ok(class_vars) = r_class_vars.as_ref() {
             assert_eq!("SquareGame", class_vars.name());
+            assert_eq!(0, class_vars.var_count(VarKind::Arg));
+            assert_eq!(0, class_vars.var_count(VarKind::Local));
+            assert_eq!(0, class_vars.var_count(VarKind::Static));
+            assert_eq!(2, class_vars.var_count(VarKind::Field));
             let r_var_square = class_vars.var(Id::from("square"));
             assert!((r_var_square).is_ok());
             if let Ok(var) = r_var_square {
@@ -248,6 +269,62 @@ mod tests {
                 assert_eq!(&VarKind::Field, &var.kind);
                 assert_eq!(&Type::Int, &var.typa);
                 assert_eq!("direction", &var.name);
+            }
+
+            let sub_dec_new = class
+                .subs()
+                .iter()
+                .find(|dec| dec.name() == &Id::from("new"))
+                .expect("");
+            let r_sub_vars_new: Result<SubVarTable, CompileError> =
+                (class_vars, sub_dec_new).try_into();
+            assert!((r_sub_vars_new).is_ok());
+            if let Ok(sub_vars) = r_sub_vars_new.as_ref() {
+                let r_var_this = sub_vars.this();
+                assert!(r_var_this.is_err());
+                assert_eq!(0, sub_vars.var_count(VarKind::Arg));
+                assert_eq!(0, sub_vars.var_count(VarKind::Local));
+                assert_eq!(0, sub_vars.var_count(VarKind::Static));
+                assert_eq!(2, sub_vars.var_count(VarKind::Field));
+            }
+
+            let sub_dec_run = class
+                .subs()
+                .iter()
+                .find(|dec| dec.name() == &Id::from("run"))
+                .expect("");
+            let r_sub_vars: Result<SubVarTable, CompileError> =
+                (class_vars, sub_dec_run).try_into();
+            assert!((r_sub_vars).is_ok());
+            if let Ok(sub_vars) = r_sub_vars.as_ref() {
+                let r_var_this = sub_vars.this();
+                assert!(r_var_this.is_ok());
+                assert_eq!(1, sub_vars.var_count(VarKind::Arg));
+                assert_eq!(2, sub_vars.var_count(VarKind::Local));
+                assert_eq!(0, sub_vars.var_count(VarKind::Static));
+                assert_eq!(2, sub_vars.var_count(VarKind::Field));
+                if let Ok(var) = r_var_this {
+                    assert_eq!(&0, &var.index);
+                    assert_eq!(&VarKind::Arg, &var.kind);
+                    assert_eq!(&Type::ClassName(Id::from(class_vars.name())), &var.typa);
+                    assert_eq!("this", &var.name);
+                }
+                let r_var_key = sub_vars.var(Id::from("key"));
+                assert!(r_var_key.is_ok());
+                if let Ok(var) = r_var_key {
+                    assert_eq!(&0, &var.index);
+                    assert_eq!(&VarKind::Local, &var.kind);
+                    assert_eq!(&Type::Char, &var.typa);
+                    assert_eq!("key", &var.name);
+                }
+                let r_var_exit = sub_vars.var(Id::from("exit"));
+                assert!(r_var_exit.is_ok());
+                if let Ok(var) = r_var_exit {
+                    assert_eq!(&1, &var.index);
+                    assert_eq!(&VarKind::Local, &var.kind);
+                    assert_eq!(&Type::Boolean, &var.typa);
+                    assert_eq!("exit", &var.name);
+                }
             }
         }
     }

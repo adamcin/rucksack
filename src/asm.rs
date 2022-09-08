@@ -41,7 +41,7 @@ pub enum Comp {
 
 impl From<&str> for Comp {
     fn from(item: &str) -> Self {
-        return match item {
+        match item {
             "0" => Comp::OOO,
             "1" => Comp::III,
             "-1" => Comp::OsI,
@@ -71,77 +71,77 @@ impl From<&str> for Comp {
             "D|A" | "A|D" => Comp::DrA,
             "D|M" | "M|D" => Comp::DrM,
             _ => Comp::XXX,
-        };
+        }
     }
 }
 
 impl Comp {
-    fn to_string(&self) -> &'static str {
-        return match self {
-            &Comp::OOO => "0",
-            &Comp::III => "1",
-            &Comp::OsI => "-1",
-            &Comp::DDD => "D",
-            &Comp::AAA => "A",
-            &Comp::MMM => "M",
-            &Comp::NoD => "!D",
-            &Comp::NoA => "!A",
-            &Comp::NoM => "!M",
-            &Comp::OsD => "-D",
-            &Comp::OsA => "-A",
-            &Comp::OsM => "-M",
-            &Comp::DpI => "D+1",
-            &Comp::ApI => "A+1",
-            &Comp::MpI => "M+1",
-            &Comp::DsI => "D-1",
-            &Comp::AsI => "A-1",
-            &Comp::MsI => "M-1",
-            &Comp::DpA => "D+A",
-            &Comp::DpM => "D+M",
-            &Comp::DsA => "D-A",
-            &Comp::DsM => "D-M",
-            &Comp::AsD => "A-D",
-            &Comp::MsD => "M-D",
-            &Comp::DnA => "D&A",
-            &Comp::DnM => "D&M",
-            &Comp::DrA => "D|A",
-            &Comp::DrM => "D|M",
-            &Comp::XXX => "!!!",
-        };
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::OOO => "0",
+            Self::III => "1",
+            Self::OsI => "-1",
+            Self::DDD => "D",
+            Self::AAA => "A",
+            Self::MMM => "M",
+            Self::NoD => "!D",
+            Self::NoA => "!A",
+            Self::NoM => "!M",
+            Self::OsD => "-D",
+            Self::OsA => "-A",
+            Self::OsM => "-M",
+            Self::DpI => "D+1",
+            Self::ApI => "A+1",
+            Self::MpI => "M+1",
+            Self::DsI => "D-1",
+            Self::AsI => "A-1",
+            Self::MsI => "M-1",
+            Self::DpA => "D+A",
+            Self::DpM => "D+M",
+            Self::DsA => "D-A",
+            Self::DsM => "D-M",
+            Self::AsD => "A-D",
+            Self::MsD => "M-D",
+            Self::DnA => "D&A",
+            Self::DnM => "D&M",
+            Self::DrA => "D|A",
+            Self::DrM => "D|M",
+            Self::XXX => "!!!",
+        }
     }
 
-    fn to_binary(&self) -> &'static str {
-        return match self {
-            &Comp::OOO => "0101010",
-            &Comp::III => "0111111",
-            &Comp::OsI => "0111010",
-            &Comp::DDD => "0001100",
-            &Comp::AAA => "0110000",
-            &Comp::MMM => "1110000",
-            &Comp::NoD => "0001101",
-            &Comp::NoA => "0110001",
-            &Comp::NoM => "1110001",
-            &Comp::OsD => "0001111",
-            &Comp::OsA => "0110011",
-            &Comp::OsM => "1110011",
-            &Comp::DpI => "0011111",
-            &Comp::ApI => "0110111",
-            &Comp::MpI => "1110111",
-            &Comp::DsI => "0001110",
-            &Comp::AsI => "0110010",
-            &Comp::MsI => "1110010",
-            &Comp::DpA => "0000010",
-            &Comp::DpM => "1000010",
-            &Comp::DsA => "0010011",
-            &Comp::DsM => "1010011",
-            &Comp::AsD => "0000111",
-            &Comp::MsD => "1000111",
-            &Comp::DnA => "0000000",
-            &Comp::DnM => "1000000",
-            &Comp::DrA => "0010101",
-            &Comp::DrM => "1010101",
-            &Comp::XXX => "1111111",
-        };
+    fn as_hack(&self) -> &'static str {
+        match self {
+            Self::OOO => "0101010",
+            Self::III => "0111111",
+            Self::OsI => "0111010",
+            Self::DDD => "0001100",
+            Self::AAA => "0110000",
+            Self::MMM => "1110000",
+            Self::NoD => "0001101",
+            Self::NoA => "0110001",
+            Self::NoM => "1110001",
+            Self::OsD => "0001111",
+            Self::OsA => "0110011",
+            Self::OsM => "1110011",
+            Self::DpI => "0011111",
+            Self::ApI => "0110111",
+            Self::MpI => "1110111",
+            Self::DsI => "0001110",
+            Self::AsI => "0110010",
+            Self::MsI => "1110010",
+            Self::DpA => "0000010",
+            Self::DpM => "1000010",
+            Self::DsA => "0010011",
+            Self::DsM => "1010011",
+            Self::AsD => "0000111",
+            Self::MsD => "1000111",
+            Self::DnA => "0000000",
+            Self::DnM => "1000000",
+            Self::DrA => "0010101",
+            Self::DrM => "1010101",
+            Self::XXX => "1111111",
+        }
     }
 
     fn parser() -> CompParser {
@@ -151,7 +151,7 @@ impl Comp {
 
 impl Display for Comp {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self.as_str())
     }
 }
 
@@ -166,7 +166,7 @@ impl<'a> Parser<'a, &'a str, Comp> for CompParser {
                 let comp: Comp = (&input[0..bound]).into();
                 Some(comp).filter(|c| c != &Comp::XXX).map(|c| (bound, c))
             })
-            .nth(0)
+            .next()
         {
             Some((bound, comp)) => Ok((&input[bound..], comp)),
             None => Err(input),
@@ -197,18 +197,18 @@ impl From<&str> for Dest {
 
 impl From<&char> for Dest {
     fn from(item: &char) -> Self {
-        return match item {
-            &'M' => Self::M,
-            &'D' => Self::D,
-            &'A' => Self::A,
+        match item {
+            'M' => Self::M,
+            'D' => Self::D,
+            'A' => Self::A,
             _ => Self::Invalid,
-        };
+        }
     }
 }
 
 impl Dest {
-    fn to_string(&self) -> &'static str {
-        return match self {
+    fn as_str(&self) -> &'static str {
+        match self {
             Self::M => "M",
             Self::D => "D",
             Self::DM => "MD",
@@ -218,11 +218,11 @@ impl Dest {
             Self::ADM => "ADM",
             Self::Null => "",
             _ => "!!!",
-        };
+        }
     }
 
-    fn to_binary(&self) -> &'static str {
-        return match self {
+    fn as_hack(&self) -> &'static str {
+        match self {
             Self::M => "001",
             Self::D => "010",
             Self::DM => "011",
@@ -231,7 +231,7 @@ impl Dest {
             Self::AD => "110",
             Self::ADM => "111",
             _ => "000",
-        };
+        }
     }
 
     pub fn includes(&self, other: &Dest) -> bool {
@@ -285,7 +285,7 @@ impl<'a> Parser<'a, &'a str, Dest> for DestParser {
 
 impl Display for Dest {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self.as_str())
     }
 }
 
@@ -293,56 +293,56 @@ impl Display for Dest {
 pub enum Jump {
     Invalid,
     Null,
-    JGT,
-    JEQ,
-    JGE,
-    JLT,
-    JNE,
-    JLE,
-    JMP,
+    Jgt,
+    Jeq,
+    Jge,
+    Jlt,
+    Jne,
+    Jle,
+    Jmp,
 }
 
 impl From<&str> for Jump {
     fn from(item: &str) -> Self {
-        return match item {
-            "JGT" => Jump::JGT,
-            "JEQ" => Jump::JEQ,
-            "JGE" => Jump::JGE,
-            "JLT" => Jump::JLT,
-            "JNE" => Jump::JNE,
-            "JLE" => Jump::JLE,
-            "JMP" => Jump::JMP,
+        match item {
+            "JGT" => Jump::Jgt,
+            "JEQ" => Jump::Jeq,
+            "JGE" => Jump::Jge,
+            "JLT" => Jump::Jlt,
+            "JNE" => Jump::Jne,
+            "JLE" => Jump::Jle,
+            "JMP" => Jump::Jmp,
             _ => Jump::Invalid,
-        };
+        }
     }
 }
 
 impl Jump {
-    fn to_string(&self) -> &'static str {
-        return match self {
-            Jump::JGT => "JGT",
-            Jump::JEQ => "JEQ",
-            Jump::JGE => "JGE",
-            Jump::JLT => "JLT",
-            Jump::JNE => "JNE",
-            Jump::JLE => "JLE",
-            Jump::JMP => "JMP",
-            Jump::Null => "",
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::Jgt => "JGT",
+            Self::Jeq => "JEQ",
+            Self::Jge => "JGE",
+            Self::Jlt => "JLT",
+            Self::Jne => "JNE",
+            Self::Jle => "JLE",
+            Self::Jmp => "JMP",
+            Self::Null => "",
             _ => "!!!",
-        };
+        }
     }
 
-    fn to_binary(&self) -> &'static str {
-        return match self {
-            Jump::JGT => "001",
-            Jump::JEQ => "010",
-            Jump::JGE => "011",
-            Jump::JLT => "100",
-            Jump::JNE => "101",
-            Jump::JLE => "110",
-            Jump::JMP => "111",
+    fn as_hack(&self) -> &'static str {
+        match self {
+            Self::Jgt => "001",
+            Self::Jeq => "010",
+            Self::Jge => "011",
+            Self::Jlt => "100",
+            Self::Jne => "101",
+            Self::Jle => "110",
+            Self::Jmp => "111",
             _ => "000",
-        };
+        }
     }
 
     fn parser() -> JumpParser {
@@ -352,7 +352,7 @@ impl Jump {
 
 impl Display for Jump {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self.as_str())
     }
 }
 
@@ -363,7 +363,7 @@ impl<'a> Parser<'a, &'a str, Jump> for JumpParser {
         match (3..=3)
             .filter(|&len| input.len() >= len)
             .map(|bound| -> Jump { (&input[0..bound]).into() })
-            .nth(0)
+            .next()
         {
             Some(jump) if jump != Jump::Invalid => Ok((&input[3..], jump)),
             _ => Err(input),
@@ -381,31 +381,31 @@ pub enum ASMLine {
 
 impl ASMLine {
     fn strip_symbol(&self, symbols: &mut Symbols) -> ASMLine {
-        return match self {
-            ASMLine::AInstr(symbol) => ASMLine::AInstr(symbols.reg_replace(&symbol)),
+        match self {
+            ASMLine::AInstr(symbol) => ASMLine::AInstr(symbols.reg_replace(symbol)),
             ASMLine::LInstr(symbol) => symbols
-                .replace(&symbol)
-                .map(|sym| ASMLine::LInstr(sym))
-                .expect(&format!("unregistered label {}", symbol)),
+                .replace(symbol)
+                .map(ASMLine::LInstr)
+                .unwrap_or_else(|| panic!("unregistered label {}", symbol)),
             _ => self.to_owned(),
-        };
+        }
     }
 
     fn to_hack(&self) -> Option<String> {
-        return match self {
+        match self {
             ASMLine::AInstr(symbol) => symbol.to_binary().map(|data| format!("0{}", data)),
             ASMLine::CInstr(dest, comp, jump) => Some(format!(
                 "111{}{}{}",
-                comp.to_binary(),
-                dest.to_binary(),
-                jump.to_binary()
+                comp.as_hack(),
+                dest.as_hack(),
+                jump.as_hack()
             )),
             _ => None,
-        };
+        }
     }
 
-    fn to_string(&self) -> String {
-        return match self {
+    fn as_string(&self) -> String {
+        match self {
             ASMLine::LInstr(symbol) => format!("({})", symbol),
             ASMLine::AInstr(symbol) => format!("@{}", symbol),
             ASMLine::CInstr(Dest::Null, comp, Jump::Null) => format!("{}", comp),
@@ -413,7 +413,7 @@ impl ASMLine {
             ASMLine::CInstr(dest, comp, Jump::Null) => format!("{}={}", dest, comp),
             ASMLine::CInstr(dest, comp, jump) => format!("{}={};{}", dest, comp, jump),
             ASMLine::Comment(text) => format!("//{}", text),
-        };
+        }
     }
 
     pub fn is_indexed(&self) -> bool {
@@ -421,10 +421,7 @@ impl ASMLine {
     }
 
     pub fn is_sloc(&self) -> bool {
-        match self {
-            &ASMLine::Comment(..) => false,
-            _ => true,
-        }
+        !matches!(self, &ASMLine::Comment(..))
     }
 
     pub fn is_blank(&self) -> bool {
@@ -432,10 +429,7 @@ impl ASMLine {
     }
 
     fn is_label(&self) -> bool {
-        return match self {
-            &ASMLine::LInstr(..) => true,
-            _ => false,
-        };
+        matches!(self, &ASMLine::LInstr(..))
     }
 
     fn parser() -> ASMLineParser {
@@ -445,7 +439,7 @@ impl ASMLine {
 
 impl Display for ASMLine {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.to_string())
+        write!(f, "{}", self.as_string())
     }
 }
 
@@ -457,17 +451,14 @@ impl<'a> Parser<'a, &'a str, ASMLine> for ASMLineParser {
             right(
                 match_literal("@"),
                 left(
-                    map(Symbol::parser(), |s| ASMLine::AInstr(s)),
+                    map(Symbol::parser(), ASMLine::AInstr),
                     range(inlinespace_char(), 0..),
                 ),
             ),
             or_else(
                 right(
                     match_literal("("),
-                    left(
-                        map(Symbol::parser(), |s| ASMLine::LInstr(s)),
-                        match_literal(")"),
-                    ),
+                    left(map(Symbol::parser(), ASMLine::LInstr), match_literal(")")),
                 ),
                 or_else(
                     right(
@@ -478,12 +469,12 @@ impl<'a> Parser<'a, &'a str, ASMLine> for ASMLineParser {
                     ),
                     map(
                         pair(
-                            peek(4, |p: &'a str| Ok((p, p.contains("="))), Dest::parser()),
+                            peek(4, |p: &'a str| Ok((p, p.contains('='))), Dest::parser()),
                             pair(
                                 Comp::parser(),
                                 peek(
                                     1,
-                                    |p: &'a str| Ok((p, p.starts_with(";"))),
+                                    |p: &'a str| Ok((p, p.starts_with(';'))),
                                     right(match_literal(";"), Jump::parser()),
                                 ),
                             ),
@@ -513,7 +504,7 @@ impl Unit for ASMUnit {
 
     fn src_path<'a>(&'a self) -> &'a str {
         self.src_path.as_str()
-    }    
+    }
 }
 
 impl FileUnit for ASMUnit {
@@ -790,7 +781,7 @@ impl<'p> Debug for SecondPass {
                     f,
                     "{:width$}                  {}",
                     " ",
-                    code.to_string(),
+                    code.as_string(),
                     width = width
                 )?;
             } else {
@@ -799,7 +790,7 @@ impl<'p> Debug for SecondPass {
                     "{:width$} {} {}",
                     line,
                     code.to_hack().unwrap_or("????????????????".to_owned()),
-                    code.to_string(),
+                    code.as_string(),
                     width = width
                 )?;
                 line = line + 1;
@@ -864,7 +855,7 @@ mod test {
     #[test]
     fn jump_parser() {
         let parse_jump = ok(Jump::parser());
-        assert_eq!(Ok(("", Some(Jump::JMP))), parse_jump.parse("JMP"));
+        assert_eq!(Ok(("", Some(Jump::Jmp))), parse_jump.parse("JMP"));
         assert_eq!(Ok(("JNG", None)), parse_jump.parse("JNG"));
     }
 
@@ -886,7 +877,7 @@ mod test {
             ),
         );
         assert_eq!(
-            Ok(("", (Some(Dest::A), (Comp::ApI, Some(Jump::JMP))))),
+            Ok(("", (Some(Dest::A), (Comp::ApI, Some(Jump::Jmp))))),
             parse_comp.parse("A=A+1;JMP")
         );
         assert_eq!(Err("B=B+1"), parse_comp.parse("B=B+1"));
