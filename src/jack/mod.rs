@@ -203,12 +203,14 @@ impl JackAnalyzer {
     }
 
     fn do_unit(path: &str) -> Result<(), Error> {
-        let unit =
-            JackUnitFactory::unit_from(path).expect(&format!("failed to read unit {}", path));
+        let unit = JackUnitFactory::unit_from(path)
+            .unwrap_or_else(|err| panic!("failed to read unit {}, error: {:?}", path, err));
         let classes = unit.parse()?;
         let vm_unit = unit.out_unit()?;
         let compiler = JackCompiler {};
-        let parseds = compiler.compile(classes)?;
+        let parseds = compiler
+            .compile(classes)
+            .map_err(|err| err_invalid_input(format!("unit {} compile error: {:?}", path, err)))?;
         vm_unit.save(&parseds)?;
         Ok(())
     }

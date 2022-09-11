@@ -666,7 +666,7 @@ impl Display for ASMParsed {
             let line_str = format!("{line}");
             if line.is_indexed() {
                 writeln!(f, "{line_str:line_width$} //   {line_num:width$}")?;
-                line_num = line_num + 1;
+                line_num += 1;
             } else {
                 writeln!(f, "{line:line_width$}")?;
             }
@@ -684,7 +684,7 @@ impl Debug for ASMParsed {
             let line_str = format!("{line}");
             if line.is_indexed() {
                 writeln!(f, "{line_str:line_width$} //   {line_num:width$}")?;
-                line_num = line_num + 1;
+                line_num += 1;
             } else {
                 writeln!(f, "{line:line_width$}")?;
             }
@@ -736,7 +736,7 @@ impl<'p> SecondPass {
             .iter()
             .map(|line| line.strip_symbol(&mut symbols))
             .collect();
-        return Self { stripped };
+        Self { stripped }
     }
 
     fn lines<'a>(&'a self) -> Vec<&'a ASMLine> {
@@ -761,9 +761,8 @@ impl<'p> SecondPass {
 impl<'p> Display for SecondPass {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for code in self.lines() {
-            match code.to_hack() {
-                Some(line) => writeln!(f, "{}", line)?,
-                _ => {}
+            if let Some(line) = code.to_hack() {
+                writeln!(f, "{}", line)?;
             };
         }
         Ok(())

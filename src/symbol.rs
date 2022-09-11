@@ -9,15 +9,15 @@ pub struct Symbol {
 
 impl Symbol {
     fn to_u16(&self) -> Option<u16> {
-        return u16::from_str_radix(&self.name, 10).ok();
+        self.name.parse::<u16>().ok()
     }
 
-    fn name<'a>(&'a self) -> &'a str {
-        return &self.name;
+    fn name(&self) -> &str {
+        &self.name
     }
 
     pub fn to_binary(&self) -> Option<String> {
-        return self.to_u16().map(|num| format!("{:015b}", num));
+        self.to_u16().map(|num| format!("{:015b}", num))
     }
 
     pub fn parser() -> SymbolParser {
@@ -27,23 +27,23 @@ impl Symbol {
 
 impl From<&str> for Symbol {
     fn from(item: &str) -> Self {
-        return Self {
+        Self {
             name: item.to_owned(),
-        };
+        }
     }
 }
 
 impl From<&u16> for Symbol {
     fn from(item: &u16) -> Self {
-        return Self {
+        Self {
             name: format!("{}", item),
-        };
+        }
     }
 }
 
 impl From<String> for Symbol {
     fn from(item: String) -> Self {
-        return Self { name: item };
+        Self { name: item }
     }
 }
 
@@ -74,8 +74,8 @@ impl<'a> Parser<'a, &'a str, Symbol> for SymbolParser {
                     range(digit_char(), 1..=5),
                     map(
                         pair(
-                            pred(any_char, |c| Self::is_ident_lead(c)),
-                            range(pred(any_char, |c| Self::is_ident(c)), 0..),
+                            pred(any_char, Self::is_ident_lead),
+                            range(pred(any_char, Self::is_ident), 0..),
                         ),
                         |(l, cs)| vec![vec![l], cs].concat(),
                     ),
@@ -91,40 +91,40 @@ impl<'a> Parser<'a, &'a str, Symbol> for SymbolParser {
 type SymbolMapping = (Symbol, u16);
 
 pub enum PredefSymbol {
-    SP,
-    LCL,
-    ARG,
-    THIS,
-    THAT,
-    SCREEN,
-    KBD,
+    Sp,
+    Lcl,
+    Arg,
+    This,
+    That,
+    Screen,
+    Kbd,
 }
 
 impl PredefSymbol {
     fn to_mapping(&self) -> SymbolMapping {
         let sym = self.as_symbol();
         let offset = match self {
-            &Self::SP => 0,
-            &Self::LCL => 1,
-            &Self::ARG => 2,
-            &Self::THIS => 3,
-            &Self::THAT => 4,
-            &Self::SCREEN => 16384,
-            &Self::KBD => 24576,
+            Self::Sp => 0,
+            Self::Lcl => 1,
+            Self::Arg => 2,
+            Self::This => 3,
+            Self::That => 4,
+            Self::Screen => 16384,
+            Self::Kbd => 24576,
         };
         (sym, offset)
     }
 
     fn all() -> Vec<Self> {
-        return vec![
-            Self::SP,
-            Self::LCL,
-            Self::ARG,
-            Self::THIS,
-            Self::THAT,
-            Self::SCREEN,
-            Self::KBD,
-        ];
+        vec![
+            Self::Sp,
+            Self::Lcl,
+            Self::Arg,
+            Self::This,
+            Self::That,
+            Self::Screen,
+            Self::Kbd,
+        ]
     }
 
     pub fn as_symbol(&self) -> Symbol {
@@ -133,13 +133,13 @@ impl PredefSymbol {
 
     pub fn as_str(&self) -> &str {
         match self {
-            &Self::SP => "SP",
-            &Self::LCL => "LCL",
-            &Self::ARG => "ARG",
-            &Self::THIS => "THIS",
-            &Self::THAT => "THAT",
-            &Self::SCREEN => "SCREEN",
-            &Self::KBD => "KBD",
+            Self::Sp => "SP",
+            Self::Lcl => "LCL",
+            Self::Arg => "ARG",
+            Self::This => "THIS",
+            Self::That => "THAT",
+            Self::Screen => "SCREEN",
+            Self::Kbd => "KBD",
         }
     }
 }
@@ -156,32 +156,32 @@ impl Symbols {
                 .concat()
                 .into_iter(),
         );
-        return Self {
+        Self {
             var_count: 16,
-            table: table,
-        };
+            table,
+        }
     }
 
     pub fn copy(other: &Self) -> Self {
-        return Self {
+        Self {
             var_count: other.var_count,
             table: other.table.to_owned(),
-        };
+        }
     }
 
     pub fn reg_replace(&mut self, symbol: &Symbol) -> Symbol {
-        return self.replace(symbol).unwrap_or_else(|| {
+        self.replace(symbol).unwrap_or_else(|| {
             let next = self.next_variable();
             self.register_variable(&next, symbol);
-            return (&next).into();
-        });
+            (&next).into()
+        })
     }
 
     pub fn replace(&self, symbol: &Symbol) -> Option<Symbol> {
-        return symbol
+        symbol
             .to_u16()
             .map(|data| (&data).into())
-            .or_else(|| self.table.get(symbol).map(|data| data.into()));
+            .or_else(|| self.table.get(symbol).map(|data| data.into()))
     }
 
     pub fn register_variable(&mut self, data: &u16, symbol: &Symbol) {
@@ -190,18 +190,18 @@ impl Symbols {
 
     fn next_variable(&mut self) -> u16 {
         let next = self.var_count;
-        self.var_count = self.var_count + 1;
-        return next;
+        self.var_count += 1;
+        next
     }
 
     fn builtin_registers() -> Vec<SymbolMapping> {
-        return (0..16).map(|i| (format!("R{}", i).into(), i)).collect();
+        (0..16).map(|i| (format!("R{}", i).into(), i)).collect()
     }
 
     fn builtin_others() -> Vec<SymbolMapping> {
-        return PredefSymbol::all()
+        PredefSymbol::all()
             .iter()
             .map(|predef| predef.to_mapping())
-            .collect();
+            .collect()
     }
 }

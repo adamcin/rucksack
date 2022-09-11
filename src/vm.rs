@@ -1,9 +1,9 @@
 use std::{
     fmt::{Debug, Display},
-    fs::{self, DirEntry, File},
+    fs::{self, DirEntry},
     io::Error,
     io::Write,
-    path::{Path, PathBuf},
+    path::Path,
 };
 
 use crate::{
@@ -21,7 +21,7 @@ pub struct VMUnit {
 impl Unit for VMUnit {
     type Syntax = VMParsed;
 
-    fn src_path<'a>(&'a self) -> &'a str {
+    fn src_path(&self) -> &str {
         self.src_path.as_str()
     }
 }
@@ -69,14 +69,14 @@ impl<'u> VMParsed {
             .to_owned();
 
         let source = std::fs::read_to_string(src_path)?;
-        return Self::parse_new(basename, source);
+        Self::parse_new(basename, source)
     }
 
     pub fn new(basename: String, source: Vec<VMLine>) -> Self {
         Self { basename, source }
     }
 
-    fn parse_new<'a>(basename: String, source: String) -> Result<Self, Error> {
+    fn parse_new(basename: String, source: String) -> Result<Self, Error> {
         let parser = VMParser::new();
         match parser
             .parse(source.as_str())
@@ -87,11 +87,11 @@ impl<'u> VMParsed {
         }
     }
 
-    fn static_basename<'a>(&'a self) -> &'a str {
+    fn static_basename(&self) -> &str {
         &self.basename
     }
 
-    fn lines<'a>(&'a self) -> Vec<&'a VMLine> {
+    fn lines(&self) -> Vec<&VMLine> {
         self.source.iter().collect()
     }
 }
@@ -149,7 +149,7 @@ impl SubCounter {
             call: self.call,
             has_ret: self.has_ret,
             init: self.init,
-            fname: self.fname.as_ref().map(|s| String::from(s)),
+            fname: self.fname.as_ref().map(String::from),
             fcall: self.fcall,
             has_call: self.has_call,
         }
@@ -163,7 +163,7 @@ impl SubCounter {
             call: self.call,
             has_ret: self.has_ret,
             init: self.init,
-            fname: self.fname.as_ref().map(|s| String::from(s)),
+            fname: self.fname.as_ref().map(String::from),
             fcall: self.fcall,
             has_call: self.has_call,
         }
@@ -177,7 +177,7 @@ impl SubCounter {
             call: self.call,
             has_ret: self.has_ret,
             init: self.init,
-            fname: self.fname.as_ref().map(|s| String::from(s)),
+            fname: self.fname.as_ref().map(String::from),
             fcall: self.fcall,
             has_call: self.has_call,
         }
@@ -195,7 +195,7 @@ impl SubCounter {
             },
             has_ret: self.has_ret,
             init: self.init,
-            fname: self.fname.as_ref().map(|s| String::from(s)),
+            fname: self.fname.as_ref().map(String::from),
             fcall: if self.fname.is_some() {
                 self.fcall + 1
             } else {
@@ -227,7 +227,7 @@ impl SubCounter {
             call: self.call,
             has_ret: true,
             init: self.init,
-            fname: self.fname.as_ref().map(|s| String::from(s)),
+            fname: self.fname.as_ref().map(String::from),
             fcall: 0,
             has_call: self.has_call,
         }
@@ -241,14 +241,14 @@ impl SubCounter {
             call: self.call,
             has_ret: self.has_ret,
             init: true,
-            fname: self.fname.as_ref().map(|s| String::from(s)),
+            fname: self.fname.as_ref().map(String::from),
             fcall: self.fcall,
             has_call: self.has_call,
         }
     }
 
     fn current_fname(&self) -> Option<&str> {
-        self.fname.as_ref().map(|s| s.as_str())
+        self.fname.as_deref()
     }
 
     fn current_call(&self) -> usize {
@@ -265,10 +265,10 @@ impl SubCounter {
 
     fn combine(&self, other: &Self) -> Self {
         Self {
-            eq: &self.eq + other.eq,
-            gt: &self.gt + other.gt,
-            lt: &self.lt + other.lt,
-            call: &self.call + other.call,
+            eq: self.eq + other.eq,
+            gt: self.gt + other.gt,
+            lt: self.lt + other.lt,
+            call: self.call + other.call,
             has_ret: self.has_ret || other.has_ret,
             init: self.init || other.init,
             fname: None,
@@ -427,7 +427,7 @@ impl CodeWriter {
         )
     }
 
-    fn translate_line<'a>(
+    fn translate_line(
         basename: &str,
         line: &VMLine,
         counter: SubCounter,
@@ -1129,10 +1129,7 @@ impl DirUnit for VMDirUnit {
 
 impl VMDirUnit {
     fn new(src_path: String, out_path: String) -> Self {
-        Self {
-            src_path: src_path,
-            out_path: out_path,
-        }
+        Self { src_path, out_path }
     }
     fn out_unit(&self) -> ASMUnit {
         ASMUnit::new(self.out_path.as_str().to_owned())
@@ -1185,7 +1182,7 @@ impl<'a> Parser<'a, &'a str, Vec<VMLine>> for VMParser {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub enum Segment {
     Argument,
     Local,
@@ -1435,6 +1432,31 @@ pub enum VMLine {
     And,
     Or,
     Not,
+}
+
+impl Clone for VMLine {
+    fn clone(&self) -> Self {
+        match self {
+            Self::Comment(text) => Self::Comment(text.to_owned()),
+            Self::Push(segment, index) => Self::Push(*segment, *index),
+            Self::Pop(segment, index) => Self::Pop(*segment, *index),
+            Self::Function(name, n_vars) => Self::Function(name.to_owned(), *n_vars),
+            Self::Call(name, n_args) => Self::Call(name.to_owned(), *n_args),
+            Self::Return => Self::Return,
+            Self::Label(label) => Self::Label(label.to_owned()),
+            Self::Goto(label) => Self::Goto(label.to_owned()),
+            Self::IfGoto(label) => Self::IfGoto(label.to_owned()),
+            Self::Add => Self::Add,
+            Self::Sub => Self::Sub,
+            Self::Neg => Self::Neg,
+            Self::Eq => Self::Eq,
+            Self::Gt => Self::Gt,
+            Self::Lt => Self::Lt,
+            Self::And => Self::And,
+            Self::Or => Self::Or,
+            Self::Not => Self::Not,
+        }
+    }
 }
 
 impl VMLine {

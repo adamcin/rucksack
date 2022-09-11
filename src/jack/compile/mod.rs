@@ -1,15 +1,16 @@
+mod class;
+mod expression;
+mod statement;
+mod sub;
 mod vartable;
 
-use std::{collections::HashMap, io::Error};
+use std::{convert::TryFrom, io::Error};
 
-use crate::vm::VMParsed;
+use crate::{common::err_invalid_input, vm::VMParsed};
 
-use super::{
-    class::{Class, ClassVarKind},
-    id::Id,
-    keyword::Keyword,
-    typea::Type,
-};
+use self::vartable::Api;
+
+use super::class::Class;
 
 pub type CompileError = String;
 
@@ -17,13 +18,15 @@ pub struct JackCompiler {}
 
 impl JackCompiler {
     pub fn compile(&self, classes: Vec<Class>) -> Result<Vec<VMParsed>, Error> {
+        let api = Api::new(classes.as_slice());
         classes
             .into_iter()
-            .map(|class| self.compile_class(class))
+            .map(|class| {
+                let name = class.name().to_owned();
+                VMParsed::try_from((&api, class))
+                    .map_err(|err| format!("class {} compile error {}", name, err))
+            })
+            .map(|r| r.map_err(err_invalid_input))
             .collect()
-    }
-
-    fn compile_class(&self, class: Class) -> Result<VMParsed, Error> {
-        Ok(VMParsed::new(class.name().to_owned(), Vec::new()))
     }
 }

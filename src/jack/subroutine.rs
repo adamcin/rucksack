@@ -360,6 +360,10 @@ impl SubroutineBody {
     pub fn vars<'a>(&'a self) -> &'a [VarDec] {
         &self.var_decs
     }
+
+    pub fn statements(&self) -> &Statements {
+        &self.statements
+    }
 }
 impl<'a> Parses<'a> for SubroutineBody {
     type Input = &'a [Token];
@@ -442,20 +446,36 @@ impl SubroutineDec {
         }
     }
 
-    pub fn name<'a>(&'a self) -> &'a Id {
+    pub fn name(&self) -> &Id {
         &self.name
     }
 
-    pub fn kind<'a>(&'a self) -> &'a SubroutineKind {
+    pub fn kind(&self) -> &SubroutineKind {
         &self.kind
     }
 
-    pub fn params<'a>(&'a self) -> &'a ParameterList {
+    pub fn return_type(&self) -> &ReturnType {
+        &self.ret
+    }
+
+    pub fn params(&self) -> &ParameterList {
         &self.params
     }
 
-    pub fn body<'a>(&'a self) -> &'a SubroutineBody {
+    pub fn body(&self) -> &SubroutineBody {
         &self.body
+    }
+
+    pub fn is_function(&self) -> bool {
+        matches!(self.kind(), SubroutineKind::Function)
+    }
+
+    pub fn is_method(&self) -> bool {
+        matches!(self.kind(), SubroutineKind::Method)
+    }
+
+    pub fn is_constructor(&self) -> bool {
+        matches!(self.kind(), SubroutineKind::Constructor)
     }
 }
 

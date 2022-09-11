@@ -1,4 +1,4 @@
-use std::fmt::Display;
+use std::{fmt::Display, slice::Iter};
 
 use crate::parse::*;
 
@@ -18,6 +18,10 @@ impl IntConst {
         } else {
             Ok(IntConst(value))
         }
+    }
+
+    pub fn value(&self) -> i16 {
+        self.0
     }
 
     pub fn zero() -> Self {
@@ -79,6 +83,18 @@ impl StringConst {
     pub fn copy(&self) -> Self {
         Self(self.0.to_owned())
     }
+
+    pub fn value(&self) -> &str {
+        self.0.as_str()
+    }
+
+    pub fn chars(&self) -> Vec<i16> {
+        (self.0)
+            .chars()
+            .filter(|c| c.is_ascii())
+            .map(|c| c as i16)
+            .collect()
+    }
 }
 impl<'a> Parses<'a> for StringConst {
     type Input = &'a str;
@@ -93,7 +109,7 @@ impl<'a> Parses<'a> for StringConst {
                     match_literal("\""),
                 ),
             ),
-            |text| Self(text),
+            Self,
         )
         .parse(input)
     }

@@ -1,4 +1,6 @@
-use crate::parse::*;
+use std::{num::TryFromIntError, slice::Iter};
+
+use crate::{parse::*, vm::VMLine};
 
 use super::{
     id::Id,
@@ -32,6 +34,20 @@ impl Op {
             Self::Eq(_) => Sym::Equals,
             Self::Lt(_) => Sym::LAngle,
             Self::Gt(_) => Sym::RAngle,
+        }
+    }
+
+    pub fn operate(&self) -> Vec<VMLine> {
+        match self {
+            Self::Plus(_) => vec![VMLine::Add],
+            Self::Minus(_) => vec![VMLine::Sub],
+            Self::Splat(_) => vec![VMLine::Call("Math.multiply".to_owned(), 2)],
+            Self::Div(_) => vec![VMLine::Call("Math.divide".to_owned(), 2)],
+            Self::And(_) => vec![VMLine::And],
+            Self::Or(_) => vec![VMLine::Or],
+            Self::Eq(_) => vec![VMLine::Eq],
+            Self::Lt(_) => vec![VMLine::Lt],
+            Self::Gt(_) => vec![VMLine::Add],
         }
     }
 
@@ -120,14 +136,21 @@ pub enum UnaryOp {
 }
 
 impl UnaryOp {
-    fn as_sym(&self) -> Sym {
+    pub fn as_sym(&self) -> Sym {
         match self {
             Self::Neg(_) => Sym::Minus,
             Self::Tilde(_) => Sym::Tilde,
         }
     }
 
-    fn term<'a>(&'a self) -> &'a Term {
+    pub fn operate(&self) -> VMLine {
+        match self {
+            Self::Neg(..) => VMLine::Neg,
+            Self::Tilde(..) => VMLine::Not,
+        }
+    }
+
+    pub fn term(&self) -> &Term {
         match self {
             Self::Neg(term) => term,
             Self::Tilde(term) => term,
@@ -372,7 +395,20 @@ impl Expression {
     pub fn new(term: Term, ops: Vec<Op>) -> Self {
         Self { term, ops }
     }
+
+    pub fn term(&self) -> &Term {
+        &self.term
+    }
+
+    pub fn is_single_term(&self) -> bool {
+        self.ops.is_empty()
+    }
+
+    pub fn iter<'a>(&'a self) -> Iter<'a, Op> {
+        self.ops.iter()
+    }
 }
+
 impl<'a> Parses<'a> for Expression {
     type Input = &'a [Token];
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {
@@ -484,6 +520,15 @@ impl ExpressionList {
     pub fn new(exprs: Vec<Expression>) -> Self {
         Self { exprs }
     }
+    pub fn len(&self) -> Result<i16, String> {
+        self.exprs
+            .len()
+            .try_into()
+            .map_err(|err| format!("too many expressions in call {:?}", err))
+    }
+    pub fn iter(&self) -> Iter<'_, Expression> {
+        self.exprs.iter()
+    }
 }
 impl<'a> Parses<'a> for ExpressionList {
     type Input = &'a [Token];
@@ -514,6 +559,15 @@ impl From<Vec<Expression>> for ExpressionList {
 impl From<Expression> for ExpressionList {
     fn from(item: Expression) -> Self {
         ExpressionList::new(vec![item])
+    }
+}
+
+impl<'a> IntoIterator for &'a ExpressionList {
+    type Item = &'a Expression;
+    type IntoIter = Iter<'a, Expression>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.iter()
     }
 }
 

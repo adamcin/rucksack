@@ -1,3 +1,5 @@
+use std::slice::Iter;
+
 use crate::parse::*;
 
 use super::{
@@ -306,7 +308,24 @@ impl Statements {
     pub fn new(stmts: Vec<Statement>) -> Self {
         Self { stmts }
     }
+
+    pub fn append(&self, stmt: Statement) -> Self {
+        Self::new(vec![self.stmts.iter().cloned().collect(), vec![stmt]].concat())
+    }
+
+    pub fn iter<'a>(&'a self) -> Iter<'a, Statement> {
+        self.stmts.iter()
+    }
 }
+
+impl<'a> IntoIterator for &'a Statements {
+    type Item = &'a Statement;
+    type IntoIter = Iter<'a, Statement>;
+    fn into_iter(self) -> Self::IntoIter {
+        self.stmts.iter()
+    }
+}
+
 impl<'a> Parses<'a> for Statements {
     type Input = &'a [Token];
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {
