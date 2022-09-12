@@ -2,13 +2,14 @@ use crate::{
     jack::{
         expression::{Call, Expression, KeywordConst, Op, Term, UnaryOp},
         id::Id,
+        subroutine::SubroutineKind,
         token::{IntConst, StringConst},
         typea::Type,
     },
     vm::{Segment, VMLine},
 };
 
-use super::{vartable::SubVarTable, CompileError};
+use super::{comberr, vartable::SubVarTable, CompileError};
 
 pub fn compile_expression(
     vars: &SubVarTable,
@@ -50,29 +51,24 @@ pub fn compile_term_string_const(
         ),
     )
     .map(|prev| vec![prev, vec![VMLine::Pop(Segment::Pointer, 1)]].concat());
-    value.chars().iter().fold(init, |acc, c| {
-        acc.and_then(|prev| {
-            compile_term_call(
-                vars,
-                &Call::new(
-                    Some(Id::from("String")),
-                    Id::from("appendChar"),
-                    vec![Expression::from(Term::IntConst(IntConst::new(2)?))].into(),
-                ),
-            )
-            .map(|next| {
+    value
+        .chars()
+        .iter()
+        .fold(init, |acc, c| {
+            acc.map(|prev| {
                 vec![
                     prev,
                     vec![
                         VMLine::Push(Segment::Pointer, 1),
                         VMLine::Push(Segment::Constant, *c),
+                        VMLine::Call("String.appendChar".to_owned(), 2),
+                        VMLine::Pop(Segment::Temp, 0),
                     ],
-                    next,
                 ]
                 .concat()
             })
         })
-    })
+        .map(|prev| vec![prev, vec![VMLine::Push(Segment::Pointer, 1)]].concat())
 }
 
 pub fn compile_term_keyword_const(
@@ -95,27 +91,21 @@ pub fn compile_term_unary_op(
 }
 
 pub fn compile_term_call(vars: &SubVarTable, call: &Call) -> Result<Vec<VMLine>, CompileError> {
-    let (class_name, init, n_args) = if vars.is_method(call.qualifier(), call.name()) {
-        if let Some(qual) = call.qualifier() {
+    let scope_call = vars.resolve_call(call.qualifier(), call.name())?;
+    let class_name = scope_call.class();
+    let (init, n_args) = if matches!(scope_call.sub_kind(), SubroutineKind::Method) {
+        if let Some(var_name) = scope_call.var() {
             // push var, then perform call
-            vars.var(qual).and_then(|var| {
-                let r_class_name = match var.var_type() {
-                    Type::ClassName(class_name) => Ok(class_name.clone()),
-                    _ => Err(format!("var {:?} does not reference an object", var)),
-                };
-                r_class_name.and_then(|class_name| {
-                    Ok((class_name, var.push(), call.expressions().len()? + 1))
-                })
-            })
+            vars.var(var_name)
+                .and_then(|var| Ok((var.push(), call.expressions().len()? + 1)))
         } else {
             // push this, then perform call
             vars.this()
-                .and_then(|var| Ok((vars.this_type(), var.push(), call.expressions().len()? + 1)))
+                .and_then(|var| Ok((var.push(), call.expressions().len()? + 1)))
+                .map_err(|err| comberr(format!("scope_call {:?}", scope_call), &err))
         }?
-    } else if let Some(qual) = call.qualifier() {
-        (qual.clone(), Vec::new(), call.expressions().len()?)
     } else {
-        (vars.this_type(), Vec::new(), call.expressions().len()?)
+        (Vec::new(), call.expressions().len()?)
     };
     call.expressions()
         .into_iter()

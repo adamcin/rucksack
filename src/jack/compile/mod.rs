@@ -1,3 +1,4 @@
+mod api;
 mod class;
 mod expression;
 mod statement;
@@ -8,17 +9,21 @@ use std::{convert::TryFrom, io::Error};
 
 use crate::{common::err_invalid_input, vm::VMParsed};
 
-use self::vartable::Api;
+use self::api::Api;
 
 use super::class::Class;
 
 pub type CompileError = String;
+pub fn comberr(wrap: String, prev: &CompileError) -> CompileError {
+    format!("{}\n* {}", wrap, prev)
+}
 
 pub struct JackCompiler {}
 
 impl JackCompiler {
     pub fn compile(&self, classes: Vec<Class>) -> Result<Vec<VMParsed>, Error> {
-        let api = Api::new(classes.as_slice());
+        let class_path = vec![Api::os_classes(), classes.to_vec()].concat();
+        let api = Api::new(class_path.as_slice());
         classes
             .into_iter()
             .map(|class| {

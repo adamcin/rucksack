@@ -15,67 +15,9 @@ use super::{
         keyword::Keyword,
         typea::Type,
     },
+    api::Api,
     CompileError,
 };
-
-pub struct SubApi {
-    name: String,
-    kind: SubroutineKind,
-}
-
-impl SubApi {
-    pub fn new(sub_dec: &SubroutineDec) -> Self {
-        Self {
-            name: sub_dec.name().as_str().to_owned(),
-            kind: sub_dec.kind().clone(),
-        }
-    }
-}
-
-pub struct ClassApi {
-    name: String,
-    subs: HashMap<String, SubApi>,
-}
-
-impl ClassApi {
-    pub fn new(class: &Class) -> Self {
-        let subs: HashMap<_, _> = class
-            .subs()
-            .iter()
-            .map(|sub_dec| (sub_dec.name().as_str().to_owned(), SubApi::new(sub_dec)))
-            .collect();
-        Self {
-            name: class.name().to_owned(),
-            subs,
-        }
-    }
-}
-
-pub struct Api {
-    classes: HashMap<String, ClassApi>,
-}
-
-impl Api {
-    pub fn new(class_path: &[Class]) -> Self {
-        let classes: HashMap<_, _> = class_path
-            .iter()
-            .map(|class| (class.name().to_owned(), ClassApi::new(class)))
-            .collect();
-        Self { classes }
-    }
-
-    pub fn is_method(&self, class_name: &Id, sub_name: &Id) -> bool {
-        self.classes
-            .get(class_name.as_str())
-            .and_then(|class| class.subs.get(sub_name.as_str()))
-            .filter(|sub| sub.kind == SubroutineKind::Method)
-            .is_some()
-    }
-
-    // pub fn os_classes() -> Vec<Class> {
-
-    // }
-}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VarKind {
@@ -104,6 +46,43 @@ pub struct Var {
     kind: VarKind,
     typa: Type,
     index: i16,
+}
+
+pub enum ScopeId {
+    Class(Id),
+    ClassVar(Id, Id),
+    PrimitiveVar(Id),
+}
+
+#[derive(Debug)]
+pub struct ScopeCall {
+    class: Id,
+    var: Option<Id>,
+    sub_name: Id,
+    sub_kind: SubroutineKind,
+}
+impl ScopeCall {
+    pub fn new(class: Id, var: Option<Id>, sub_name: Id, sub_kind: SubroutineKind) -> Self {
+        Self {
+            class,
+            var,
+            sub_name,
+            sub_kind,
+        }
+    }
+
+    pub fn class(&self) -> &Id {
+        &self.class
+    }
+    pub fn var(&self) -> Option<&Id> {
+        self.var.as_ref()
+    }
+    pub fn sub_name(&self) -> &Id {
+        &self.sub_name
+    }
+    pub fn sub_kind(&self) -> &SubroutineKind {
+        &self.sub_kind
+    }
 }
 
 impl Var {
@@ -142,6 +121,20 @@ impl<'a> ClassVarTable<'a> {
 
     pub fn name(&self) -> &str {
         &self.name
+    }
+
+    pub fn resolve_id(&self, name: &Id) -> Result<ScopeId, CompileError> {
+        if let Some(var) = self.vars.get(name.as_str()) {
+            if let Type::ClassName(class_name) = var.var_type() {
+                Ok(ScopeId::ClassVar(class_name.clone(), name.clone()))
+            } else {
+                Ok(ScopeId::PrimitiveVar(name.clone()))
+            }
+        } else if self.api.has_class(name) {
+            Ok(ScopeId::Class(name.clone()))
+        } else {
+            Err(format!("id {name} not found in scope"))
+        }
     }
 
     pub fn var(&self, name: &Id) -> Result<&Var, CompileError> {
@@ -200,10 +193,6 @@ impl<'a> ClassVarTable<'a> {
     pub fn api(&self) -> &Api {
         self.api
     }
-
-    pub fn is_this_method(&self, sub_name: &Id) -> bool {
-        self.api.is_method(&Id::from(self.name()), sub_name)
-    }
 }
 
 impl<'a> TryFrom<(&'a Api, &Class)> for ClassVarTable<'a> {
@@ -243,6 +232,18 @@ impl<'a, 'b> SubVarTable<'a, 'b> {
             vars: HashMap::new(),
             n_arg: 0,
             n_local: 0,
+        }
+    }
+
+    pub fn resolve_id(&self, name: &Id) -> Result<ScopeId, CompileError> {
+        if let Some(var) = self.vars.get(name.as_str()) {
+            if let Type::ClassName(class_name) = var.var_type() {
+                Ok(ScopeId::ClassVar(class_name.clone(), name.clone()))
+            } else {
+                Ok(ScopeId::PrimitiveVar(name.clone()))
+            }
+        } else {
+            self.class_vars.resolve_id(name)
         }
     }
 
@@ -341,20 +342,38 @@ impl<'a, 'b> SubVarTable<'a, 'b> {
         }
     }
 
-    pub fn is_method(&self, qualifier: Option<&Id>, name: &Id) -> bool {
+    pub fn resolve_call(
+        &self,
+        qualifier: Option<&Id>,
+        name: &Id,
+    ) -> Result<ScopeCall, CompileError> {
         if let Some(qual) = qualifier {
-            if let Ok(var) = self.var(qual) {
-                match &var.typa {
-                    Type::ClassName(class_name) => {
-                        self.class_vars.api().is_method(class_name, name)
-                    }
-                    _ => false,
+            match self.resolve_id(qual)? {
+                ScopeId::Class(class_name) => self
+                    .class_vars
+                    .api()
+                    .resolve_sub_kind(&class_name, name)
+                    .map(|kind| ScopeCall::new(class_name, None, name.clone(), kind)),
+                ScopeId::ClassVar(class_name, var_name) => self
+                    .class_vars
+                    .api()
+                    .resolve_sub_kind(&class_name, name)
+                    .map(|kind| ScopeCall::new(class_name, Some(var_name), name.clone(), kind)),
+                ScopeId::PrimitiveVar(var_name) => {
+                    Err(format!("var {var_name} represents a primitive type"))
                 }
-            } else {
-                self.class_vars.api().is_method(qual, name)
             }
         } else {
-            self.class_vars.is_this_method(name)
+            let sub_kind = self
+                .class_vars
+                .api()
+                .resolve_sub_kind(&self.this_type(), name)?;
+            Ok(ScopeCall::new(
+                self.this_type(),
+                None,
+                name.clone(),
+                sub_kind,
+            ))
         }
     }
 }

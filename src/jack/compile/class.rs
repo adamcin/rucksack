@@ -1,5 +1,6 @@
 use std::convert::TryFrom;
 
+use super::api::Api;
 use super::sub::compile_sub;
 use super::vartable::*;
 use super::CompileError;
