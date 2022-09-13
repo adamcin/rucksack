@@ -47,7 +47,7 @@ impl Op {
             Self::Or(_) => vec![VMLine::Or],
             Self::Eq(_) => vec![VMLine::Eq],
             Self::Lt(_) => vec![VMLine::Lt],
-            Self::Gt(_) => vec![VMLine::Add],
+            Self::Gt(_) => vec![VMLine::Gt],
         }
     }
 

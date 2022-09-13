@@ -47,28 +47,24 @@ pub fn compile_term_string_const(
         &Call::new(
             Some(Id::from("String")),
             Id::from("new"),
-            vec![Expression::from(Term::IntConst(IntConst::zero()))].into(),
+            vec![Expression::from(Term::IntConst(IntConst::new(
+                value.len(),
+            )?))]
+            .into(),
         ),
-    )
-    .map(|prev| vec![prev, vec![VMLine::Pop(Segment::Pointer, 1)]].concat());
-    value
-        .chars()
-        .iter()
-        .fold(init, |acc, c| {
-            acc.map(|prev| {
+    );
+    value.chars().iter().fold(init, |acc, c| {
+        acc.map(|prev| {
+            vec![
+                prev,
                 vec![
-                    prev,
-                    vec![
-                        VMLine::Push(Segment::Pointer, 1),
-                        VMLine::Push(Segment::Constant, *c),
-                        VMLine::Call("String.appendChar".to_owned(), 2),
-                        VMLine::Pop(Segment::Temp, 0),
-                    ],
-                ]
-                .concat()
-            })
+                    VMLine::Push(Segment::Constant, *c),
+                    VMLine::Call("String.appendChar".to_owned(), 2),
+                ],
+            ]
+            .concat()
         })
-        .map(|prev| vec![prev, vec![VMLine::Push(Segment::Pointer, 1)]].concat())
+    })
 }
 
 pub fn compile_term_keyword_const(
@@ -138,8 +134,8 @@ pub fn compile_term_var_sub(
     var_name: &Id,
     var_sub: &Expression,
 ) -> Result<Vec<VMLine>, CompileError> {
-    compile_term_var_name(vars, var_name).and_then(|prev| {
-        compile_expression(vars, var_sub).map(|next| {
+    compile_expression(vars, var_sub).and_then(|prev| {
+        compile_term_var_name(vars, var_name).map(|next| {
             vec![
                 prev,
                 next,

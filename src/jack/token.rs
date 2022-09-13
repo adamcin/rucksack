@@ -75,25 +75,31 @@ impl XmlFormattable for IntConst {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct StringConst(String);
+pub struct StringConst(Vec<u8>);
 impl StringConst {
     pub fn new(value: String) -> Self {
-        Self(value)
+        Self(
+            value
+                .chars()
+                .filter(|c| c.is_ascii())
+                .map(|c| c as u8)
+                .collect(),
+        )
     }
     pub fn copy(&self) -> Self {
         Self(self.0.to_owned())
     }
 
-    pub fn value(&self) -> &str {
-        self.0.as_str()
+    pub fn value(&self) -> String {
+        self.0.iter().map(|i| *i as char).collect()
+    }
+
+    pub fn len(&self) -> i16 {
+        (self.0).len() as i16
     }
 
     pub fn chars(&self) -> Vec<i16> {
-        (self.0)
-            .chars()
-            .filter(|c| c.is_ascii())
-            .map(|c| c as i16)
-            .collect()
+        (self.0).iter().map(|u| *u as i16).collect()
     }
 }
 impl<'a> Parses<'a> for StringConst {
@@ -109,7 +115,7 @@ impl<'a> Parses<'a> for StringConst {
                     match_literal("\""),
                 ),
             ),
-            Self,
+            Self::new,
         )
         .parse(input)
     }
@@ -117,7 +123,7 @@ impl<'a> Parses<'a> for StringConst {
 
 impl From<&str> for StringConst {
     fn from(item: &str) -> Self {
-        Self(item.to_owned())
+        Self::new(item.to_owned())
     }
 }
 
@@ -127,7 +133,7 @@ impl XmlFormattable for StringConst {
     }
 
     fn xml_inline_body(&self) -> String {
-        (self.0).to_owned()
+        self.value()
     }
 
     fn xml_body_type(&self) -> XmlBody {
@@ -332,7 +338,7 @@ mod tests {
     #[test]
     fn string_const() {
         assert_eq!(
-            Ok(("", StringConst("a string".to_owned()))),
+            Ok(("", StringConst::new("a string".to_owned()))),
             StringConst::parse_into("\"a string\"")
         );
         assert_eq!(Err("a string"), StringConst::parse_into("a string"));

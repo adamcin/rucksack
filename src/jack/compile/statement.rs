@@ -90,6 +90,10 @@ fn compile_statement(
             .map(|lines| vec![lines, vec![VMLine::Return]].concat()),
         Statement::Do(call) => compile_term_call(vars, call.as_ref())
             .map(|lines| vec![lines, vec![VMLine::Pop(Segment::Temp, 0)]].concat()),
+        Statement::Let(var_name, ovar_sub, oexpr) if ovar_sub.is_none() => {
+            compile_expression(vars, oexpr.as_ref())
+                .and_then(|prev| vars.var(var_name).map(|var| vec![prev, var.pop()].concat()))
+        }
         Statement::Let(var, ovar_sub, oexpr) => {
             compile_let_left(vars, var, ovar_sub.as_ref().as_ref()).and_then(|left| {
                 compile_expression(vars, oexpr.as_ref()).map(|right| {
@@ -165,12 +169,13 @@ pub fn compile_let_left(
 ) -> Result<Vec<VMLine>, CompileError> {
     // push var
     // if has var_sub, compile_expression, then VMLine::Add,
-    let r_prev = vars.var(var_name).map(|var| var.push());
-    if let Some(expr) = var_sub {
-        r_prev.and_then(|prev| {
-            compile_expression(vars, expr).map(|next| vec![prev, next, vec![VMLine::Add]].concat())
-        })
+    let r_sub = if let Some(expr) = var_sub {
+        compile_expression(vars, expr)
     } else {
-        r_prev
-    }
+        Ok(Vec::new())
+    };
+    r_sub.and_then(|prev| {
+        vars.var(var_name)
+            .map(|var| vec![prev, var.push(), vec![VMLine::Add]].concat())
+    })
 }
