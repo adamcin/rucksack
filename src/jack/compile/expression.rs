@@ -74,7 +74,7 @@ pub fn compile_term_keyword_const(
     match value {
         KeywordConst::This => vars.this().map(|var| var.push()),
         KeywordConst::Null => Ok(vec![VMLine::Push(Segment::Constant, 0)]),
-        KeywordConst::True => Ok(vec![VMLine::Push(Segment::Constant, -1)]),
+        KeywordConst::True => Ok(vec![VMLine::Push(Segment::Constant, 0), VMLine::Not]),
         KeywordConst::False => Ok(vec![VMLine::Push(Segment::Constant, 0)]),
     }
 }
