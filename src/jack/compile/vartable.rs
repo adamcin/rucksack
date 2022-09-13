@@ -19,35 +19,6 @@ use super::{
     CompileError,
 };
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum VarKind {
-    Static,
-    Field,
-    Arg,
-    Local,
-    Pointer,
-}
-
-impl VarKind {
-    pub fn as_segment(&self) -> Segment {
-        match self {
-            Self::Static => Segment::Static,
-            Self::Field => Segment::This,
-            Self::Arg => Segment::Argument,
-            Self::Local => Segment::Local,
-            Self::Pointer => Segment::Pointer,
-        }
-    }
-}
-
-#[derive(Debug)]
-pub struct Var {
-    name: String,
-    kind: VarKind,
-    typa: Type,
-    index: i16,
-}
-
 pub enum ScopeId {
     Class(Id),
     ClassVar(Id, Id),
@@ -61,6 +32,7 @@ pub struct ScopeCall {
     sub_name: Id,
     sub_kind: SubroutineKind,
 }
+
 impl ScopeCall {
     pub fn new(class: Id, var: Option<Id>, sub_name: Id, sub_kind: SubroutineKind) -> Self {
         Self {
@@ -85,15 +57,60 @@ impl ScopeCall {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum VarKind {
+    Static,
+    Field,
+    Arg,
+    Local,
+    This,
+}
+
+impl VarKind {
+    pub fn push_segment(&self) -> Segment {
+        match self {
+            Self::Static => Segment::Static,
+            Self::Field => Segment::This,
+            Self::Arg => Segment::Argument,
+            Self::Local => Segment::Local,
+            Self::This => Segment::Pointer,
+        }
+    }
+
+    pub fn pop_segment(&self) -> Segment {
+        match self {
+            Self::Static => Segment::Static,
+            Self::Field => Segment::This,
+            Self::Arg => Segment::Argument,
+            Self::Local => Segment::Local,
+            Self::This => Segment::Pointer,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct Var {
+    name: String,
+    kind: VarKind,
+    typa: Type,
+    index: i16,
+}
+
 impl Var {
     pub fn push(&self) -> Vec<VMLine> {
-        vec![VMLine::Push(self.kind.as_segment(), self.index)]
+        vec![VMLine::Push(self.kind.push_segment(), self.index)]
     }
     pub fn pop(&self) -> Vec<VMLine> {
-        vec![VMLine::Pop(self.kind.as_segment(), self.index)]
+        vec![VMLine::Pop(self.kind.pop_segment(), self.index)]
+    }
+    pub fn kind(&self) -> &VarKind {
+        &self.kind
     }
     pub fn var_type(&self) -> &Type {
         &self.typa
+    }
+    pub fn name(&self) -> &str {
+        &self.name
     }
     pub fn index(&self) -> i16 {
         self.index
@@ -220,15 +237,19 @@ impl<'a> TryFrom<(&'a Api, &Class)> for ClassVarTable<'a> {
 
 pub struct SubVarTable<'a, 'b> {
     class_vars: &'b ClassVarTable<'a>,
+    name: String,
+    kind: SubroutineKind,
     vars: HashMap<String, Var>,
     n_arg: usize,
     n_local: usize,
 }
 
 impl<'a, 'b> SubVarTable<'a, 'b> {
-    pub fn new(class_vars: &'b ClassVarTable<'a>) -> Self {
+    pub fn new(class_vars: &'b ClassVarTable<'a>, sub: &SubroutineDec) -> Self {
         Self {
             class_vars,
+            name: format!("{}.{}", class_vars.name(), sub.name().as_str()),
+            kind: sub.kind().to_owned(),
             vars: HashMap::new(),
             n_arg: 0,
             n_local: 0,
@@ -267,24 +288,17 @@ impl<'a, 'b> SubVarTable<'a, 'b> {
     }
 
     pub fn add_this(&mut self, sub_kind: &SubroutineKind) -> Result<(), CompileError> {
-        let var_kind = match sub_kind {
-            SubroutineKind::Function => {
-                Err("'this' var not allowed for 'function' kind subroutine".to_owned())
-            }
-            SubroutineKind::Method => {
-                if self.n_arg > 0 {
-                    Err("this must be arg0".to_owned())
-                } else {
-                    Ok(VarKind::Arg)
-                }
-            }
-            SubroutineKind::Constructor => Ok(VarKind::Pointer),
-        }?;
+        if matches!(sub_kind, SubroutineKind::Function) {
+            return Err("'this' var not allowed for 'function' kind subroutine".to_owned());
+        }
+        if self.n_arg > 0 {
+            return Err("this must be arg0".to_owned());
+        }
         self.vars.insert(
             Keyword::This.as_str().to_owned(),
             Var {
                 name: Keyword::This.as_str().to_owned(),
-                kind: var_kind,
+                kind: VarKind::This,
                 typa: Type::ClassName(Id::from(self.class_vars.name())),
                 index: self
                     .n_arg
@@ -292,7 +306,9 @@ impl<'a, 'b> SubVarTable<'a, 'b> {
                     .map_err(|err| format!("failed to construct this var error: {}", err))?,
             },
         );
-        self.n_arg += 1;
+        if matches!(sub_kind, SubroutineKind::Method) {
+            self.n_arg += 1;
+        }
         Ok(())
     }
 
@@ -342,6 +358,36 @@ impl<'a, 'b> SubVarTable<'a, 'b> {
         }
     }
 
+    pub fn sub_start(&self) -> Result<Vec<VMLine>, CompileError> {
+        Ok(vec![
+            vec![VMLine::Function(
+                self.name.to_owned(),
+                self.var_count(VarKind::Local)?,
+            )],
+            if matches!(self.kind, SubroutineKind::Constructor) {
+                vec![
+                    VMLine::Push(
+                        Segment::Constant,
+                        self.class_vars.var_count(VarKind::Field)?,
+                    ),
+                    VMLine::Call("Memory.alloc".to_owned(), 1),
+                    VMLine::Pop(Segment::Pointer, 0),
+                ]
+            } else {
+                Vec::new()
+            },
+            if matches!(self.kind, SubroutineKind::Method) {
+                vec![
+                    VMLine::Push(Segment::Argument, 0),
+                    VMLine::Pop(Segment::Pointer, 0),
+                ]
+            } else {
+                Vec::new()
+            },
+        ]
+        .concat())
+    }
+
     pub fn resolve_call(
         &self,
         qualifier: Option<&Id>,
@@ -386,7 +432,7 @@ where
     type Error = CompileError;
     fn try_from(value: (&'b ClassVarTable<'a>, &SubroutineDec)) -> Result<Self, Self::Error> {
         let (class_vars, sub) = value;
-        let mut sub_vars = SubVarTable::new(class_vars);
+        let mut sub_vars = SubVarTable::new(class_vars, sub);
         if !matches!(sub.kind(), SubroutineKind::Function) {
             sub_vars.add_this(sub.kind())?;
         }
@@ -462,7 +508,7 @@ mod tests {
             assert!((r_sub_vars_new).is_ok());
             if let Ok(sub_vars) = r_sub_vars_new.as_ref() {
                 let r_var_this = sub_vars.this();
-                assert!(r_var_this.is_err());
+                assert!(r_var_this.is_ok());
                 assert_eq!(Ok(0), sub_vars.var_count(VarKind::Arg));
                 assert_eq!(Ok(0), sub_vars.var_count(VarKind::Local));
                 assert_eq!(Ok(0), sub_vars.var_count(VarKind::Static));
@@ -487,26 +533,29 @@ mod tests {
                 assert_eq!(Ok(0), sub_vars.var_count(VarKind::Static));
                 assert_eq!(Ok(2), sub_vars.var_count(VarKind::Field));
                 if let Ok(var) = r_var_this {
-                    assert_eq!(&0, &var.index);
-                    assert_eq!(&VarKind::Arg, &var.kind);
-                    assert_eq!(&Type::ClassName(Id::from(class_vars.name())), &var.typa);
-                    assert_eq!("this", &var.name);
+                    assert_eq!(&0, &var.index());
+                    assert_eq!(&VarKind::This, &var.kind);
+                    assert_eq!(
+                        &Type::ClassName(Id::from(class_vars.name())),
+                        var.var_type()
+                    );
+                    assert_eq!("this", var.name());
                 }
                 let r_var_key = sub_vars.var(&Id::from("key"));
                 assert!(r_var_key.is_ok());
                 if let Ok(var) = r_var_key {
-                    assert_eq!(&0, &var.index);
-                    assert_eq!(&VarKind::Local, &var.kind);
-                    assert_eq!(&Type::Char, &var.typa);
-                    assert_eq!("key", &var.name);
+                    assert_eq!(&0, &var.index());
+                    assert_eq!(&VarKind::Local, var.kind());
+                    assert_eq!(&Type::Char, var.var_type());
+                    assert_eq!("key", var.name());
                 }
                 let r_var_exit = sub_vars.var(&Id::from("exit"));
                 assert!(r_var_exit.is_ok());
                 if let Ok(var) = r_var_exit {
-                    assert_eq!(&1, &var.index);
-                    assert_eq!(&VarKind::Local, &var.kind);
-                    assert_eq!(&Type::Boolean, &var.typa);
-                    assert_eq!("exit", &var.name);
+                    assert_eq!(&1, &var.index());
+                    assert_eq!(&VarKind::Local, var.kind());
+                    assert_eq!(&Type::Boolean, var.var_type());
+                    assert_eq!("exit", var.name());
                 }
             }
         }

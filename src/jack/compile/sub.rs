@@ -1,17 +1,15 @@
 use crate::{
     jack::{
         expression::{Expression, KeywordConst, Term},
-        keyword::Keyword,
         statement::{Statement, Statements},
         subroutine::{ReturnType, SubroutineDec, SubroutineKind},
-        typea::Type,
     },
-    vm::{Segment, VMLine},
+    vm::VMLine,
 };
 
 use super::{
     statement::compile_statements,
-    vartable::{ClassVarTable, SubVarTable, VarKind},
+    vartable::{ClassVarTable, SubVarTable},
     CompileError,
 };
 
@@ -21,26 +19,7 @@ pub fn compile_sub(
     sub: &SubroutineDec,
 ) -> Result<Vec<VMLine>, CompileError> {
     let sub_vars: SubVarTable = (class_vars, sub).try_into()?;
-    let name = format!("{}.{}", class_vars.name(), sub.name().as_str());
-    Ok(vec![
-        vec![VMLine::Function(name, sub_vars.var_count(VarKind::Local)?)],
-        if sub.is_method() {
-            vec![
-                VMLine::Push(Segment::Argument, 0),
-                VMLine::Pop(Segment::Pointer, 0),
-            ]
-        } else if sub.is_constructor() {
-            vec![
-                VMLine::Push(Segment::Constant, class_vars.var_count(VarKind::Field)?),
-                VMLine::Call("Memory.alloc".to_owned(), 1),
-                VMLine::Pop(Segment::Pointer, 0),
-            ]
-        } else {
-            Vec::new()
-        },
-        compile_sub_body(sub, &sub_vars)?,
-    ]
-    .concat())
+    Ok(vec![sub_vars.sub_start()?, compile_sub_body(sub, &sub_vars)?].concat())
 }
 
 fn compile_sub_body(
@@ -53,7 +32,7 @@ fn compile_sub_body(
         sub_vars,
         sub.body().statements(),
     )?;
-    compile_statements(sub_vars, &stmts, None)
+    compile_statements(sub_vars, &stmts)
 }
 
 fn ensure_returns(

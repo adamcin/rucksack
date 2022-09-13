@@ -16,7 +16,7 @@ use std::path::Path;
 
 use crate::common::{err_invalid_input, DirUnit, FileUnit, Unit, UnitFactory};
 use crate::parse::*;
-use crate::vm::{VMDirUnit, VMParsed, VMUnit, VMUnitFactory, VMUnitType};
+use crate::vm::{VMDirUnit, VMUnit, VMUnitFactory, VMUnitType};
 
 use self::class::Class;
 use self::compile::JackCompiler;
@@ -231,7 +231,7 @@ mod test {
             "data/11/Square",
         ];
 
-        let result = JackAnalyzer::do_main(dirs.iter().map(|&item| item).collect());
+        let result = JackAnalyzer::do_main(dirs.iter().copied().collect());
         if let Err(error) = &result {
             println!("analyze_11 error: {:?}", error);
         }
