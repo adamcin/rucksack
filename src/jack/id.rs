@@ -21,7 +21,7 @@ impl Id {
         Self(value)
     }
 
-    pub fn try_new<'a>(value: &'a str) -> Result<Id, &'a str> {
+    pub fn try_new(value: &str) -> Result<Id, &str> {
         if Keyword::is_reserved(value) {
             Err(value)
         } else {
@@ -41,7 +41,7 @@ impl Id {
         Self::is_ident_lead(c) || c.is_ascii_digit()
     }
 
-    pub fn as_str<'a>(&'a self) -> &'a str {
+    pub fn as_str(&self) -> &str {
         &self.0
     }
 }
@@ -59,8 +59,8 @@ impl<'a> Parses<'a> for Id {
             map(
                 map(
                     pair(
-                        pred(any_char, |c| Self::is_ident_lead(c)),
-                        range(pred(any_char, |c| Self::is_ident(c)), 0..),
+                        pred(any_char, Self::is_ident_lead),
+                        range(pred(any_char, Self::is_ident), 0..),
                     ),
                     |(l, cs)| vec![vec![l], cs].concat(),
                 ),
@@ -83,7 +83,7 @@ impl XmlFormattable for Id {
         super::xmlformat::XmlBody::Inline
     }
 
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "identifier"
     }
 
@@ -100,10 +100,9 @@ impl Display for Id {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::parse::*;
     #[test]
     fn ids() {
-        let parser = move |input| Id::parse_into(input);
+        let parser = Id::parse_into;
 
         assert_eq!(Ok(("", Id("MyClass".to_owned()))), parser.parse("MyClass"));
         assert_eq!(Err("12345"), parser.parse("12345"));

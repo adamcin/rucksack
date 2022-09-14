@@ -105,8 +105,8 @@ impl XmlFormattable for Sym {
     fn xml_body_type(&self) -> super::xmlformat::XmlBody {
         super::xmlformat::XmlBody::Inline
     }
-    
-    fn xml_elem<'a>(&'a self) -> &str {
+
+    fn xml_elem(&self) -> &str {
         "symbol"
     }
 
@@ -128,8 +128,6 @@ impl Display for Sym {
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::parse::*;
 
     #[test]
     fn parse_within_brackets() {

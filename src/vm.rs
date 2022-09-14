@@ -1150,7 +1150,6 @@ impl DirParser {
             .iter()
             .map(|src_path| VMUnitFactory::read_vm(src_path))
             .collect();
-
         units?
             .iter()
             .map(|wrapped| match wrapped {

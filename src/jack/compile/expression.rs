@@ -4,7 +4,6 @@ use crate::{
         id::Id,
         subroutine::SubroutineKind,
         token::{IntConst, StringConst},
-        typea::Type,
     },
     vm::{Segment, VMLine},
 };
@@ -114,7 +113,7 @@ pub fn compile_term_call(vars: &SubVarTable, call: &Call) -> Result<Vec<VMLine>,
             vec![
                 prev,
                 vec![VMLine::Call(
-                    format!("{}.{}", class_name.as_str(), call.name().as_str()),
+                    format!("{}.{}", class_name.as_str(), scope_call.sub_name().as_str()),
                     n_args,
                 )],
             ]

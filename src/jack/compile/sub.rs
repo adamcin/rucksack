@@ -44,18 +44,18 @@ fn ensure_returns(
     let returns = Branch::resolve_all(stmts, sub_vars)?;
     match (sub_kind, return_type) {
         (SubroutineKind::Constructor, _) => {
-            if ResolvedReturnType::This != returns.to_type().unwrap_or(ResolvedReturnType::This) {
+            if ResolvedReturnType::This != returns.as_type().unwrap_or(ResolvedReturnType::This) {
                 return Err(format!(
                     "constructor must only return 'this': returns {:?}",
-                    returns.to_type()
+                    returns.as_type()
                 ));
             }
         }
         (_, ReturnType::Void) => {
-            if ResolvedReturnType::Void != returns.to_type().unwrap_or(ResolvedReturnType::Void) {
+            if ResolvedReturnType::Void != returns.as_type().unwrap_or(ResolvedReturnType::Void) {
                 return Err(format!(
                     "void typed subroutine must only return 'void': returns {:?}",
-                    returns.to_type()
+                    returns.as_type()
                 ));
             }
         }
@@ -82,7 +82,7 @@ enum ResolvedReturnType {
 }
 
 fn resolve_type(
-    sub_vars: &SubVarTable,
+    _sub_vars: &SubVarTable,
     oexpr: &Option<Expression>,
 ) -> Result<ResolvedReturnType, CompileError> {
     match oexpr {
@@ -119,7 +119,7 @@ enum Branch {
 }
 
 impl Branch {
-    fn to_type(&self) -> Option<ResolvedReturnType> {
+    fn as_type(&self) -> Option<ResolvedReturnType> {
         match self {
             Self::Returns(returns) | Self::Splits(returns) => Some(*returns),
             Self::Continues => None,
@@ -130,20 +130,16 @@ impl Branch {
         !matches!(self, Self::Returns(..))
     }
 
-    fn returns(&self) -> bool {
-        !matches!(self, Self::Continues)
-    }
-
     fn coalesce(&self, other: &Self) -> Result<Self, CompileError> {
         match (self, other) {
-            (Self::Continues, other) | (other, Self::Continues) => Ok(other.clone()),
+            (Self::Continues, other) | (other, Self::Continues) => Ok(*other),
             (Self::Returns(ltype), Self::Returns(rtype)) => {
-                combine_types(&ltype, &rtype).map(Self::Returns)
+                combine_types(ltype, rtype).map(Self::Returns)
             }
             (Self::Splits(ltype), Self::Returns(rtype))
             | (Self::Returns(ltype), Self::Splits(rtype))
             | (Self::Splits(ltype), Self::Splits(rtype)) => {
-                combine_types(&ltype, &rtype).map(Self::Splits)
+                combine_types(ltype, rtype).map(Self::Splits)
             }
         }
     }
@@ -166,7 +162,6 @@ impl Branch {
                                 )
                             })
                         }),
-                        _ => Ok(Self::Continues),
                     })
             },
         )

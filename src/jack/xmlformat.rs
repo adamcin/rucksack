@@ -6,7 +6,7 @@ pub enum XmlBody {
 }
 
 pub trait XmlFormattable: Sized + std::fmt::Debug {
-    fn xml_elem<'a>(&'a self) -> &str;
+    fn xml_elem(&self) -> &str;
     fn xml_body_type(&self) -> XmlBody {
         XmlBody::Expanded
     }
@@ -15,7 +15,7 @@ pub trait XmlFormattable: Sized + std::fmt::Debug {
     }
     fn write_xml_body<'a>(
         &self,
-        xmlf: &XmlF<'a, Self>,
+        _xmlf: &XmlF<'a, Self>,
         f: &mut std::fmt::Formatter<'_>,
     ) -> std::fmt::Result {
         match self.xml_body_type() {
@@ -48,11 +48,7 @@ where
         U: XmlFormattable,
         'a: 'b,
     {
-        XmlF {
-            indent: self.indent + self.indent_inc,
-            indent_inc: self.indent_inc,
-            syntax,
-        }
+        XmlF::new(syntax, self.indent + self.indent_inc, self.indent_inc)
     }
 
     pub fn write_child<'b, U>(
@@ -81,11 +77,11 @@ where
         write!(f, "{tab}<{}>", self.syntax.xml_elem())?;
         match self.syntax.xml_body_type() {
             XmlBody::Inline => {
-                self.syntax.write_xml_body(&self, f)?;
+                self.syntax.write_xml_body(self, f)?;
             }
             XmlBody::Expanded => {
-                writeln!(f, "")?;
-                self.syntax.write_xml_body(&self, f)?;
+                writeln!(f)?;
+                self.syntax.write_xml_body(self, f)?;
                 write!(f, "{tab}")?
             }
         }
@@ -96,7 +92,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::{fmt::Debug, fs::read_to_string, path::Path};
+    use std::fmt::Debug;
 
     use crate::jack::token::TokenStream;
     use crate::jack::{class::Class, common::testutil::read_test_file};
@@ -116,7 +112,7 @@ mod tests {
             super::XmlBody::Inline
         }
 
-        fn xml_elem<'a>(&'a self) -> &str {
+        fn xml_elem(&self) -> &str {
             "simple"
         }
     }

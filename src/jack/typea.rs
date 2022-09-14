@@ -30,7 +30,7 @@ impl<'a> Parses<'a> for Type {
                 map(Keyword::Char, |_| Self::Char),
                 or_else(
                     map(Keyword::Boolean, |_| Self::Boolean),
-                    map(move |input| Token::id(input), |id| Self::ClassName(id)),
+                    map(Token::id, Self::ClassName),
                 ),
             ),
         )
@@ -58,7 +58,7 @@ impl XmlFormattable for Type {
         }
     }
 
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         match self {
             Self::Int => Keyword::Int.xml_elem(),
             Self::Char => Keyword::Char.xml_elem(),

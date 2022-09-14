@@ -1,4 +1,4 @@
-use std::{num::TryFromIntError, slice::Iter};
+use std::slice::Iter;
 
 use crate::{parse::*, vm::VMLine};
 
@@ -51,7 +51,7 @@ impl Op {
         }
     }
 
-    pub fn term<'a>(&'a self) -> &'a Term {
+    pub fn term(&self) -> &Term {
         match self {
             Self::Plus(term) => term,
             Self::Minus(term) => term,
@@ -70,53 +70,22 @@ impl<'a> Parses<'a> for Op {
     type Input = &'a [Token];
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {
         or_else(
-            map(
-                right(Sym::Plus, move |input| Term::parse_into(input)),
-                |term| Self::Plus(term),
-            ),
+            map(right(Sym::Plus, Term::parse_into), Self::Plus),
             or_else(
-                map(
-                    right(Sym::Minus, move |input| Term::parse_into(input)),
-                    |term| Self::Minus(term),
-                ),
+                map(right(Sym::Minus, Term::parse_into), Self::Minus),
                 or_else(
-                    map(
-                        right(Sym::Splat, move |input| Term::parse_into(input)),
-                        |term| Self::Splat(term),
-                    ),
+                    map(right(Sym::Splat, Term::parse_into), Self::Splat),
                     or_else(
-                        map(
-                            right(Sym::Slash, move |input| Term::parse_into(input)),
-                            |term| Self::Div(term),
-                        ),
+                        map(right(Sym::Slash, Term::parse_into), Self::Div),
                         or_else(
-                            map(
-                                right(Sym::Amp, move |input| Term::parse_into(input)),
-                                |term| Self::And(term),
-                            ),
+                            map(right(Sym::Amp, Term::parse_into), Self::And),
                             or_else(
-                                map(
-                                    right(Sym::Pipe, move |input| Term::parse_into(input)),
-                                    |term| Self::Or(term),
-                                ),
+                                map(right(Sym::Pipe, Term::parse_into), Self::Or),
                                 or_else(
-                                    map(
-                                        right(Sym::Equals, move |input| Term::parse_into(input)),
-                                        |term| Self::Eq(term),
-                                    ),
+                                    map(right(Sym::Equals, Term::parse_into), Self::Eq),
                                     or_else(
-                                        map(
-                                            right(Sym::LAngle, move |input| {
-                                                Term::parse_into(input)
-                                            }),
-                                            |term| Self::Lt(term),
-                                        ),
-                                        map(
-                                            right(Sym::RAngle, move |input| {
-                                                Term::parse_into(input)
-                                            }),
-                                            |term| Self::Gt(term),
-                                        ),
+                                        map(right(Sym::LAngle, Term::parse_into), Self::Lt),
+                                        map(right(Sym::RAngle, Term::parse_into), Self::Gt),
                                     ),
                                 ),
                             ),
@@ -162,14 +131,8 @@ impl<'a> Parses<'a> for UnaryOp {
     type Input = &'a [Token];
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {
         or_else(
-            map(
-                right(Sym::Minus, move |input| Term::parse_into(input)),
-                |term| Self::Neg(term),
-            ),
-            map(
-                right(Sym::Tilde, move |input| Term::parse_into(input)),
-                |term| Self::Tilde(term),
-            ),
+            map(right(Sym::Minus, Term::parse_into), Self::Neg),
+            map(right(Sym::Tilde, Term::parse_into), Self::Tilde),
         )
         .parse(input)
     }
@@ -187,75 +150,49 @@ pub enum Term {
     SubroutineCall(Box<Call>),
 }
 impl Term {
-    pub fn int_parser<'a>(input: &'a [Token]) -> ParseResult<'a, &'a [Token], Self> {
-        map(
-            move |input| Token::int(input),
-            |value| Self::IntConst(value),
-        )
-        .parse(input)
+    pub fn int_parser(input: &[Token]) -> ParseResult<'_, &[Token], Self> {
+        map(Token::int, Self::IntConst).parse(input)
     }
 
-    pub fn string_parser<'a>(input: &'a [Token]) -> ParseResult<'a, &'a [Token], Self> {
-        map(
-            move |input| Token::str(input),
-            |value| Self::StringConst(value),
-        )
-        .parse(input)
+    pub fn string_parser(input: &[Token]) -> ParseResult<'_, &[Token], Self> {
+        map(Token::str, Self::StringConst).parse(input)
     }
 
-    pub fn keyword_parser<'a>(input: &'a [Token]) -> ParseResult<'a, &'a [Token], Self> {
-        map(
-            move |input| KeywordConst::parse_into(input),
-            |value| Self::KeywordConst(value),
-        )
-        .parse(input)
+    pub fn keyword_parser(input: &[Token]) -> ParseResult<'_, &[Token], Self> {
+        map(KeywordConst::parse_into, Self::KeywordConst).parse(input)
     }
 
-    pub fn var_name_parser<'a>(input: &'a [Token]) -> ParseResult<'a, &'a [Token], Self> {
-        map(move |input| Token::id(input), |value| Self::VarName(value)).parse(input)
+    pub fn var_name_parser(input: &[Token]) -> ParseResult<'_, &[Token], Self> {
+        map(Token::id, Self::VarName).parse(input)
     }
 
-    pub fn var_sub_parser<'a>(input: &'a [Token]) -> ParseResult<'a, &'a [Token], Self> {
+    pub fn var_sub_parser(input: &[Token]) -> ParseResult<'_, &[Token], Self> {
         map(
             pair(
-                move |input| Token::id(input),
-                right(
-                    Sym::LSquare,
-                    left(move |input| Expression::parse_into(input), Sym::RSquare),
-                ),
+                Token::id,
+                right(Sym::LSquare, left(Expression::parse_into, Sym::RSquare)),
             ),
             |(id, expr)| Self::VarSub(id, Box::new(expr)),
         )
         .parse(input)
     }
 
-    pub fn expr_parser<'a>(input: &'a [Token]) -> ParseResult<'a, &'a [Token], Self> {
+    pub fn expr_parser(input: &[Token]) -> ParseResult<'_, &[Token], Self> {
         map(
-            right(
-                Sym::LRound,
-                left(move |input| Expression::parse_into(input), Sym::RRound),
-            ),
+            right(Sym::LRound, left(Expression::parse_into, Sym::RRound)),
             |expr| Self::Expr(Box::new(expr)),
         )
         .parse(input)
     }
 
-    pub fn unary_op_parser<'a>(input: &'a [Token]) -> ParseResult<'a, &'a [Token], Self> {
-        map(
-            move |input| UnaryOp::parse_into(input),
-            |value| Self::UnaryOp(Box::new(value)),
-        )
-        .parse(input)
+    pub fn unary_op_parser(input: &[Token]) -> ParseResult<'_, &[Token], Self> {
+        map(UnaryOp::parse_into, |value| Self::UnaryOp(Box::new(value))).parse(input)
     }
 
-    pub fn subroutine_call_parser<'a>(input: &'a [Token]) -> ParseResult<'a, &'a [Token], Self> {
-        map(
-            move |input| {
-                let result = Call::parse_into(input);
-                result
-            },
-            |value| Self::SubroutineCall(Box::new(value)),
-        )
+    pub fn subroutine_call_parser(input: &[Token]) -> ParseResult<'_, &[Token], Self> {
+        map(Call::parse_into, |value| {
+            Self::SubroutineCall(Box::new(value))
+        })
         .parse(input)
     }
 }
@@ -264,21 +201,18 @@ impl<'a> Parses<'a> for Term {
     type Input = &'a [Token];
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {
         or_else(
-            move |input| Self::expr_parser(input),
+            Self::expr_parser,
             or_else(
-                move |input| Self::string_parser(input),
+                Self::string_parser,
                 or_else(
-                    move |input| Self::unary_op_parser(input),
+                    Self::unary_op_parser,
                     or_else(
-                        move |input| Self::int_parser(input),
+                        Self::int_parser,
                         or_else(
-                            move |input| Self::subroutine_call_parser(input),
+                            Self::subroutine_call_parser,
                             or_else(
-                                move |input| Self::var_sub_parser(input),
-                                or_else(
-                                    move |input| Self::var_name_parser(input),
-                                    move |input| Self::keyword_parser(input),
-                                ),
+                                Self::var_sub_parser,
+                                or_else(Self::var_name_parser, Self::keyword_parser),
                             ),
                         ),
                     ),
@@ -342,7 +276,7 @@ impl From<Expression> for Term {
 }
 
 impl XmlFormattable for Term {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "term"
     }
 
@@ -404,7 +338,7 @@ impl Expression {
         self.ops.is_empty()
     }
 
-    pub fn iter<'a>(&'a self) -> Iter<'a, Op> {
+    pub fn iter(&self) -> Iter<'_, Op> {
         self.ops.iter()
     }
 }
@@ -413,10 +347,7 @@ impl<'a> Parses<'a> for Expression {
     type Input = &'a [Token];
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {
         map(
-            pair(
-                move |input| Term::parse_into(input),
-                range(move |input| Op::parse_into(input), 0..),
-            ),
+            pair(Term::parse_into, range(Op::parse_into, 0..)),
             |(term, ops)| Self::new(term, ops),
         )
         .parse(input)
@@ -494,7 +425,7 @@ impl From<Call> for Expression {
 }
 
 impl XmlFormattable for Expression {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "expression"
     }
 
@@ -536,15 +467,12 @@ impl<'a> Parses<'a> for ExpressionList {
         map(
             ok(map(
                 pair(
-                    move |input| Expression::parse_into(input),
-                    range(
-                        right(Sym::Comma, move |input| Expression::parse_into(input)),
-                        0..,
-                    ),
+                    Expression::parse_into,
+                    range(right(Sym::Comma, Expression::parse_into), 0..),
                 ),
                 |(first, exprs)| vec![vec![first], exprs].concat(),
             )),
-            |exprs| Self::new(exprs.unwrap_or(Vec::new())),
+            |exprs| Self::new(exprs.unwrap_or_default()),
         )
         .parse(input)
     }
@@ -572,7 +500,7 @@ impl<'a> IntoIterator for &'a ExpressionList {
 }
 
 impl XmlFormattable for ExpressionList {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "expressionList"
     }
 
@@ -625,15 +553,15 @@ impl Call {
         Self::new(Some(qualifier), name, exprs)
     }
 
-    pub fn qualifier<'a>(&'a self) -> Option<&'a Id> {
+    pub fn qualifier(&self) -> Option<&Id> {
         self.qualifier.as_ref()
     }
 
-    pub fn name<'a>(&'a self) -> &'a Id {
+    pub fn name(&self) -> &Id {
         &self.name
     }
 
-    pub fn expressions<'a>(&'a self) -> &'a ExpressionList {
+    pub fn expressions(&self) -> &ExpressionList {
         &self.exprs
     }
 }
@@ -643,13 +571,10 @@ impl<'a> Parses<'a> for Call {
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {
         map(
             pair(
-                ok(left(move |input| Token::id(input), Sym::Dot)),
+                ok(left(Token::id, Sym::Dot)),
                 pair(
-                    move |input| Token::id(input),
-                    right(
-                        Sym::LRound,
-                        left(move |input| ExpressionList::parse_into(input), Sym::RRound),
-                    ),
+                    Token::id,
+                    right(Sym::LRound, left(ExpressionList::parse_into, Sym::RRound)),
                 ),
             ),
             |(qualifier, (name, exprs))| Self::new(qualifier, name, exprs),
@@ -695,26 +620,20 @@ impl<'a> Parses<'a> for KeywordConst {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        jack::{
-            common::testutil::{assert_tokens, transform_result},
-            token::TokenStream,
-        },
-        parse::*,
-    };
+    use crate::jack::common::testutil::{assert_tokens, transform_result};
 
     fn token_result(tokens: &[Token]) -> Result<Expression, Option<Token>> {
-        let parser = move |input| Expression::parse_into(input);
+        let parser = Expression::parse_into;
         transform_result(parser.parse(tokens))
     }
 
     fn token_result_to_term(tokens: &[Token]) -> Result<Term, Option<Token>> {
-        let parser = move |input| Term::parse_into(input);
+        let parser = Term::parse_into;
         transform_result(parser.parse(tokens))
     }
 
     fn token_result_to_unary_op(tokens: &[Token]) -> Result<UnaryOp, Option<Token>> {
-        let parser = move |input| UnaryOp::parse_into(input);
+        let parser = UnaryOp::parse_into;
         transform_result(parser.parse(tokens))
     }
 

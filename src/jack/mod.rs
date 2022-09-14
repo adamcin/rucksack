@@ -39,16 +39,16 @@ impl JackFileUnit {
 impl Unit for JackFileUnit {
     type Syntax = Class;
 
-    fn src_path<'a>(&'a self) -> &'a str {
+    fn src_path(&self) -> &str {
         self.src_path.as_str()
     }
 }
 
 impl FileUnit for JackFileUnit {
-    fn parse<'a>(&'a self) -> Result<Self::Syntax, Error> {
+    fn parse(&self) -> Result<Self::Syntax, Error> {
         let source = std::fs::read_to_string(self.src_path())?;
         let (_str_rem, stream) = TokenStream::parse_into(source.as_str()).expect("must work");
-        let parser = move |input| Class::parse_into(input);
+        let parser = Class::parse_into;
         let result = parser.parse(stream.tokens());
         match result {
             Ok((_rem, parsed)) => Ok(parsed),
@@ -64,7 +64,7 @@ pub struct JackDirUnit {
 impl Unit for JackDirUnit {
     type Syntax = Class;
 
-    fn src_path<'a>(&'a self) -> &'a str {
+    fn src_path(&self) -> &str {
         &self.src_path
     }
 }
@@ -95,7 +95,7 @@ impl JackDirParser {
         let children: Result<Vec<DirEntry>, Error> = std::fs::read_dir(unit.src_path())?.collect();
         let jack_files: Vec<String> = children?
             .iter()
-            .filter_map(|child| child.path().to_str().map(|p| String::from(p)))
+            .filter_map(|child| child.path().to_str().map(String::from))
             .filter(|name| name.ends_with(".jack"))
             .collect();
         let units: Result<Vec<JackUnitType>, Error> = jack_files
@@ -120,15 +120,15 @@ pub enum JackUnitType {
 impl JackUnitType {
     pub fn out_unit(&self) -> Result<VMUnitType, Error> {
         match self {
-            Self::FileUnit(unit) => unit.out_unit().map(|unit| VMUnitType::File(unit)),
-            Self::DirUnit(unit) => unit.out_unit().map(|unit| VMUnitType::Dir(unit)),
+            Self::FileUnit(unit) => unit.out_unit().map(VMUnitType::File),
+            Self::DirUnit(unit) => unit.out_unit().map(VMUnitType::Dir),
         }
     }
 }
 impl Unit for JackUnitType {
     type Syntax = Class;
 
-    fn src_path<'a>(&'a self) -> &'a str {
+    fn src_path(&self) -> &str {
         match self {
             Self::FileUnit(unit) => unit.src_path.as_str(),
             Self::DirUnit(unit) => unit.src_path.as_str(),
@@ -138,7 +138,7 @@ impl Unit for JackUnitType {
 
 impl DirUnit for JackUnitType {
     fn filename_for(elem: &Self::Syntax) -> String {
-        format!("{}.jack", elem.name()).to_owned()
+        format!("{}.jack", elem.name())
     }
 
     fn parse(&self) -> Result<Vec<Self::Syntax>, Error> {
@@ -166,7 +166,7 @@ impl JackUnitFactory {
     }
 
     pub fn read_dir(src_path: &str) -> Result<JackUnitType, Error> {
-        Self::read_dir_as_dir(src_path).map(|unit| JackUnitType::DirUnit(unit))
+        Self::read_dir_as_dir(src_path).map(JackUnitType::DirUnit)
     }
 }
 
@@ -231,7 +231,7 @@ mod test {
             "data/11/Square",
         ];
 
-        let result = JackAnalyzer::do_main(dirs.iter().copied().collect());
+        let result = JackAnalyzer::do_main(dirs.to_vec());
         if let Err(error) = &result {
             println!("analyze_11 error: {:?}", error);
         }

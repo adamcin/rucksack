@@ -36,7 +36,7 @@ impl<'a> Parses<'a> for ClassVarKind {
     }
 }
 impl XmlFormattable for ClassVarKind {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "keyword"
     }
 
@@ -65,15 +65,15 @@ impl ClassVarDec {
         }
     }
 
-    pub fn var_kind<'a>(&'a self) -> &'a ClassVarKind {
+    pub fn var_kind(&self) -> &ClassVarKind {
         &self.var_kind
     }
 
-    pub fn var_type<'a>(&'a self) -> &'a Type {
+    pub fn var_type(&self) -> &Type {
         &self.var_type
     }
 
-    pub fn var_names<'a>(&'a self) -> Vec<&'a Id> {
+    pub fn var_names(&self) -> Vec<&Id> {
         vec![vec![&self.var_name], self.var_names.iter().collect()].concat()
     }
 }
@@ -83,15 +83,12 @@ impl<'a> Parses<'a> for ClassVarDec {
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {
         map(
             pair(
-                move |input| ClassVarKind::parse_into(input),
+                ClassVarKind::parse_into,
                 pair(
-                    move |input| Type::parse_into(input),
+                    Type::parse_into,
                     pair(
-                        move |input| Token::id(input),
-                        left(
-                            range(right(Sym::Comma, move |input| Token::id(input)), 0..),
-                            Sym::Semi,
-                        ),
+                        Token::id,
+                        left(range(right(Sym::Comma, Token::id), 0..), Sym::Semi),
                     ),
                 ),
             ),
@@ -104,7 +101,7 @@ impl<'a> Parses<'a> for ClassVarDec {
 }
 
 impl XmlFormattable for ClassVarDec {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "classVarDec"
     }
 
@@ -136,15 +133,15 @@ impl Class {
         Self { name, vars, subs }
     }
 
-    pub fn name<'a>(&'a self) -> &'a str {
+    pub fn name(&self) -> &str {
         self.name.as_str()
     }
 
-    pub fn vars<'a>(&'a self) -> &'a [ClassVarDec] {
+    pub fn vars(&self) -> &[ClassVarDec] {
         self.vars.as_slice()
     }
 
-    pub fn subs<'a>(&'a self) -> &'a [SubroutineDec] {
+    pub fn subs(&self) -> &[SubroutineDec] {
         self.subs.as_slice()
     }
 }
@@ -155,13 +152,13 @@ impl<'a> Parses<'a> for Class {
             Keyword::Class,
             map(
                 pair(
-                    move |input| Token::id(input),
+                    Token::id,
                     right(
                         Sym::LCurly,
                         left(
                             pair(
-                                range(move |input| ClassVarDec::parse_into(input), 0..),
-                                range(move |input| SubroutineDec::parse_into(input), 0..),
+                                range(ClassVarDec::parse_into, 0..),
+                                range(SubroutineDec::parse_into, 0..),
                             ),
                             Sym::RCurly,
                         ),
@@ -175,7 +172,7 @@ impl<'a> Parses<'a> for Class {
 }
 
 impl XmlFormattable for Class {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "class"
     }
 

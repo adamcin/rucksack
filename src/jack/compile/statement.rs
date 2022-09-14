@@ -1,5 +1,3 @@
-use std::fmt::Display;
-
 use crate::{
     jack::{
         expression::Expression,
@@ -53,7 +51,7 @@ fn compile_statements_internal(
     stmts: &Statements,
     init_idx: StatementIndex,
 ) -> Result<(StatementIndex, Vec<VMLine>), CompileError> {
-    let init = (init_idx.clone(), Vec::new());
+    let init = (init_idx, Vec::new());
     stmts.iter().fold(Ok(init), |acc, stmt| {
         acc.and_then(|(index, prev)| {
             compile_statement(&index, vars, stmt)

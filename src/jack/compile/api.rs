@@ -1,20 +1,9 @@
-use std::{
-    collections::HashMap,
-    convert::{TryFrom, TryInto},
-};
+use std::collections::HashMap;
 
-use crate::{
-    jack::subroutine::{ReturnType, SubroutineBody, SubroutineDec, SubroutineKind},
-    vm::{Segment, VMLine},
-};
+use crate::jack::subroutine::{ReturnType, SubroutineBody, SubroutineDec, SubroutineKind};
 
 use super::{
-    super::{
-        class::{Class, ClassVarKind},
-        id::Id,
-        keyword::Keyword,
-        typea::Type,
-    },
+    super::{class::Class, id::Id},
     CompileError,
 };
 

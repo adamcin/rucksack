@@ -63,21 +63,18 @@ impl Statement {
         Self::Return(Box::new(Some(value)))
     }
 
-    pub fn let_parser<'a>(input: &'a [Token]) -> ParseResult<'a, &'a [Token], Self> {
+    pub fn let_parser(input: &[Token]) -> ParseResult<'_, &[Token], Self> {
         right(
             Keyword::Let,
             map(
                 pair(
-                    move |input| Token::id(input),
+                    Token::id,
                     pair(
                         ok(right(
                             Sym::LSquare,
-                            left(move |input| Expression::parse_into(input), Sym::RSquare),
+                            left(Expression::parse_into, Sym::RSquare),
                         )),
-                        left(
-                            right(Sym::Equals, move |input| Expression::parse_into(input)),
-                            Sym::Semi,
-                        ),
+                        left(right(Sym::Equals, Expression::parse_into), Sym::Semi),
                     ),
                 ),
                 |(var_name, (var_sub, value))| {
@@ -88,23 +85,17 @@ impl Statement {
         .parse(input)
     }
 
-    pub fn if_parser<'a>(input: &'a [Token]) -> ParseResult<'a, &'a [Token], Self> {
+    pub fn if_parser(input: &[Token]) -> ParseResult<'_, &[Token], Self> {
         right(
             Keyword::If,
             map(
                 pair(
-                    right(
-                        Sym::LRound,
-                        left(move |input| Expression::parse_into(input), Sym::RRound),
-                    ),
+                    right(Sym::LRound, left(Expression::parse_into, Sym::RRound)),
                     pair(
-                        right(
-                            Sym::LCurly,
-                            left(move |input| Statements::parse_into(input), Sym::RCurly),
-                        ),
+                        right(Sym::LCurly, left(Statements::parse_into, Sym::RCurly)),
                         ok(right(
                             left(Keyword::Else, Sym::LCurly),
-                            left(move |input| Statements::parse_into(input), Sym::RCurly),
+                            left(Statements::parse_into, Sym::RCurly),
                         )),
                     ),
                 ),
@@ -116,19 +107,13 @@ impl Statement {
         .parse(input)
     }
 
-    pub fn while_parser<'a>(input: &'a [Token]) -> ParseResult<'a, &'a [Token], Self> {
+    pub fn while_parser(input: &[Token]) -> ParseResult<'_, &[Token], Self> {
         right(
             Keyword::While,
             map(
                 pair(
-                    right(
-                        Sym::LRound,
-                        left(move |input| Expression::parse_into(input), Sym::RRound),
-                    ),
-                    right(
-                        Sym::LCurly,
-                        left(move |input| Statements::parse_into(input), Sym::RCurly),
-                    ),
+                    right(Sym::LRound, left(Expression::parse_into, Sym::RRound)),
+                    right(Sym::LCurly, left(Statements::parse_into, Sym::RCurly)),
                 ),
                 |(condition, stmts)| Self::While(Box::new(condition), Box::new(stmts)),
             ),
@@ -136,25 +121,22 @@ impl Statement {
         .parse(input)
     }
 
-    pub fn do_parser<'a>(input: &'a [Token]) -> ParseResult<'a, &'a [Token], Self> {
+    pub fn do_parser(input: &[Token]) -> ParseResult<'_, &[Token], Self> {
         right(
             Keyword::Do,
             left(
-                map(
-                    move |input| Call::parse_into(input),
-                    |call| Self::Do(Box::new(call)),
-                ),
+                map(Call::parse_into, |call| Self::Do(Box::new(call))),
                 Sym::Semi,
             ),
         )
         .parse(input)
     }
 
-    pub fn return_parser<'a>(input: &'a [Token]) -> ParseResult<'a, &'a [Token], Self> {
+    pub fn return_parser(input: &[Token]) -> ParseResult<'_, &[Token], Self> {
         right(
             Keyword::Return,
             left(
-                map(ok(move |input| Expression::parse_into(input)), |expr| {
+                map(ok(Expression::parse_into), |expr| {
                     Self::Return(Box::new(expr))
                 }),
                 Sym::Semi,
@@ -165,8 +147,8 @@ impl Statement {
 
     fn xml_body_let<'a>(
         id: &Id,
-        osub: &Box<Option<Expression>>,
-        value: &Box<Expression>,
+        osub: &Option<Expression>,
+        value: &Expression,
         xmlf: &XmlF<'a, Self>,
         f: &mut std::fmt::Formatter<'_>,
     ) -> std::fmt::Result {
@@ -178,24 +160,24 @@ impl Statement {
             xmlf.write_child(f, &Sym::RSquare)?;
         }
         xmlf.write_child(f, &Sym::Equals)?;
-        xmlf.write_child(f, value.as_ref())?;
+        xmlf.write_child(f, value)?;
         xmlf.write_child(f, &Sym::Semi)?;
         Ok(())
     }
 
     fn xml_body_if<'a>(
-        condition: &Box<Expression>,
-        body: &Box<Statements>,
-        oelze: &Box<Option<Statements>>,
+        condition: &Expression,
+        body: &Statements,
+        oelze: &Option<Statements>,
         xmlf: &XmlF<'a, Self>,
         f: &mut std::fmt::Formatter<'_>,
     ) -> std::fmt::Result {
         xmlf.write_child(f, &Keyword::If)?;
         xmlf.write_child(f, &Sym::LRound)?;
-        xmlf.write_child(f, condition.as_ref())?;
+        xmlf.write_child(f, condition)?;
         xmlf.write_child(f, &Sym::RRound)?;
         xmlf.write_child(f, &Sym::LCurly)?;
-        xmlf.write_child(f, body.as_ref())?;
+        xmlf.write_child(f, body)?;
         xmlf.write_child(f, &Sym::RCurly)?;
         if let Some(elze) = oelze.as_ref() {
             xmlf.write_child(f, &Keyword::Else)?;
@@ -207,23 +189,23 @@ impl Statement {
     }
 
     fn xml_body_while<'a>(
-        condition: &Box<Expression>,
-        body: &Box<Statements>,
+        condition: &Expression,
+        body: &Statements,
         xmlf: &XmlF<'a, Self>,
         f: &mut std::fmt::Formatter<'_>,
     ) -> std::fmt::Result {
         xmlf.write_child(f, &Keyword::While)?;
         xmlf.write_child(f, &Sym::LRound)?;
-        xmlf.write_child(f, condition.as_ref())?;
+        xmlf.write_child(f, condition)?;
         xmlf.write_child(f, &Sym::RRound)?;
         xmlf.write_child(f, &Sym::LCurly)?;
-        xmlf.write_child(f, body.as_ref())?;
+        xmlf.write_child(f, body)?;
         xmlf.write_child(f, &Sym::RCurly)?;
         Ok(())
     }
 
     fn xml_body_do<'a>(
-        call: &Box<Call>,
+        call: &Call,
         xmlf: &XmlF<'a, Self>,
         f: &mut std::fmt::Formatter<'_>,
     ) -> std::fmt::Result {
@@ -241,7 +223,7 @@ impl Statement {
     }
 
     fn xml_body_return<'a>(
-        ovalue: &Box<Option<Expression>>,
+        ovalue: &Option<Expression>,
         xmlf: &XmlF<'a, Self>,
         f: &mut std::fmt::Formatter<'_>,
     ) -> std::fmt::Result {
@@ -257,15 +239,12 @@ impl<'a> Parses<'a> for Statement {
     type Input = &'a [Token];
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {
         or_else(
-            move |input| Self::let_parser(input),
+            Self::let_parser,
             or_else(
-                move |input| Self::if_parser(input),
+                Self::if_parser,
                 or_else(
-                    move |input| Self::while_parser(input),
-                    or_else(
-                        move |input| Self::do_parser(input),
-                        move |input| Self::return_parser(input),
-                    ),
+                    Self::while_parser,
+                    or_else(Self::do_parser, Self::return_parser),
                 ),
             ),
         )
@@ -274,7 +253,7 @@ impl<'a> Parses<'a> for Statement {
 }
 
 impl XmlFormattable for Statement {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         match self {
             Self::Let(..) => "letStatement",
             Self::If(..) => "ifStatement",
@@ -310,10 +289,10 @@ impl Statements {
     }
 
     pub fn append(&self, stmt: Statement) -> Self {
-        Self::new(vec![self.stmts.iter().cloned().collect(), vec![stmt]].concat())
+        Self::new(vec![self.stmts.to_vec(), vec![stmt]].concat())
     }
 
-    pub fn iter<'a>(&'a self) -> Iter<'a, Statement> {
+    pub fn iter(&self) -> Iter<'_, Statement> {
         self.stmts.iter()
     }
 }
@@ -329,11 +308,7 @@ impl<'a> IntoIterator for &'a Statements {
 impl<'a> Parses<'a> for Statements {
     type Input = &'a [Token];
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {
-        map(
-            range(move |input| Statement::parse_into(input), 0..),
-            |stmts| Self::new(stmts),
-        )
-        .parse(input)
+        map(range(Statement::parse_into, 0..), Self::new).parse(input)
     }
 }
 impl From<Vec<Statement>> for Statements {
@@ -349,7 +324,7 @@ impl From<Statement> for Statements {
 }
 
 impl XmlFormattable for Statements {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "statements"
     }
 

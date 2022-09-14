@@ -131,7 +131,7 @@ impl XmlFormattable for Keyword {
         super::xmlformat::XmlBody::Inline
     }
 
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "keyword"
     }
 

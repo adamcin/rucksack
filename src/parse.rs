@@ -69,11 +69,9 @@ pub fn ok<'a, P, I: 'a + ?Sized + Debug, R>(p: P) -> impl Parser<'a, &'a I, Opti
 where
     P: Parser<'a, &'a I, R>,
 {
-    move |input| {
-        match p.parse(input).ok() {
-            Some((remaining, output)) => Ok((remaining, Some(output))),
-            None => Ok((input, None)),
-        }
+    move |input| match p.parse(input).ok() {
+        Some((remaining, output)) => Ok((remaining, Some(output))),
+        None => Ok((input, None)),
     }
 }
 
@@ -255,18 +253,18 @@ pub fn pad0<'a>() -> impl Parser<'a, &'a str, Vec<char>> {
 }
 
 pub fn digit_char<'a>() -> impl Parser<'a, &'a str, char> {
-    pred(any_char, |c| c.is_digit(10))
+    pred(any_char, |c| c.is_ascii_digit())
 }
 
 pub fn i16_literal<'a>() -> impl Parser<'a, &'a str, i16> {
     and_then(
         pair(ok(pred(any_char, |c| c == &'-')), range(digit_char(), 0..)),
         |(neg, digits)| {
-            let value: String = vec![neg.map(|c| vec![c]).unwrap_or(Vec::new()), digits]
+            let value: String = vec![neg.map(|c| vec![c]).unwrap_or_default(), digits]
                 .concat()
                 .into_iter()
                 .collect();
-            i16::from_str_radix(value.as_str(), 10)
+            value.as_str().parse::<i16>()
         },
     )
 }
@@ -361,7 +359,7 @@ mod test {
     fn peek_parser() {
         let parse_peek = peek(
             4,
-            |p: &'static str| Ok((p, p.contains("="))),
+            |p: &'static str| Ok((p, p.contains('='))),
             map(
                 left(
                     range(

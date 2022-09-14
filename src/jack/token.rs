@@ -1,4 +1,4 @@
-use std::{fmt::Display, slice::Iter};
+use std::fmt::Display;
 
 use crate::parse::*;
 
@@ -44,9 +44,11 @@ impl<'a> Parses<'a> for IntConst {
                 chars.into_iter().collect()
             }),
             |token| {
-                i16::from_str_radix(token.as_str(), 10)
+                token
+                    .as_str()
+                    .parse::<i16>()
                     .map_err(|err| err.to_string())
-                    .and_then(|num| Self::new(num))
+                    .and_then(Self::new)
             },
         )
         .parse(input)
@@ -61,7 +63,7 @@ impl TryFrom<i16> for IntConst {
 }
 
 impl XmlFormattable for IntConst {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "integerConstant"
     }
 
@@ -128,7 +130,7 @@ impl From<&str> for StringConst {
 }
 
 impl XmlFormattable for StringConst {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "stringConstant"
     }
 
@@ -150,35 +152,35 @@ pub enum Token {
     Identifier(Id),
 }
 impl Token {
-    pub fn key<'a>(input: &'a [Self], filter: Keyword) -> ParseResult<'a, &'a [Self], Keyword> {
+    pub fn key(input: &[Self], filter: Keyword) -> ParseResult<'_, &[Self], Keyword> {
         match input.split_first() {
             Some((&Self::Keyword(value), rem)) if value == filter => Ok((rem, value)),
             _ => Err(input),
         }
     }
 
-    pub fn sym<'a>(input: &'a [Self], filter: Sym) -> ParseResult<'a, &'a [Self], Sym> {
+    pub fn sym(input: &[Self], filter: Sym) -> ParseResult<'_, &[Self], Sym> {
         match input.split_first() {
             Some((&Self::Sym(value), rem)) if value == filter => Ok((rem, value)),
             _ => Err(input),
         }
     }
 
-    pub fn id<'a>(input: &'a [Self]) -> ParseResult<'a, &'a [Self], Id> {
+    pub fn id(input: &[Self]) -> ParseResult<'_, &[Self], Id> {
         match input.split_first() {
             Some((Self::Identifier(value), rem)) => Ok((rem, value.copy())),
             _ => Err(input),
         }
     }
 
-    pub fn int<'a>(input: &'a [Self]) -> ParseResult<'a, &'a [Self], IntConst> {
+    pub fn int(input: &[Self]) -> ParseResult<'_, &[Self], IntConst> {
         match input.split_first() {
             Some((Self::IntConst(value), rem)) => Ok((rem, value.copy())),
             _ => Err(input),
         }
     }
 
-    pub fn str<'a>(input: &'a [Self]) -> ParseResult<'a, &'a [Self], StringConst> {
+    pub fn str(input: &[Self]) -> ParseResult<'_, &[Self], StringConst> {
         match input.split_first() {
             Some((Self::StringConst(value), rem)) => Ok((rem, value.copy())),
             _ => Err(input),
@@ -193,23 +195,14 @@ impl<'a> Parses<'a> for Token {
         Self::Input: 'a,
     {
         or_else(
-            map(
-                move |input| StringConst::parse_into(input),
-                |v| Self::StringConst(v),
-            ),
+            map(StringConst::parse_into, Self::StringConst),
             or_else(
-                map(
-                    move |input| IntConst::parse_into(input),
-                    |v| Self::IntConst(v),
-                ),
+                map(IntConst::parse_into, Self::IntConst),
                 or_else(
-                    map(move |input| Sym::parse_into(input), |v| Self::Sym(v)),
+                    map(Sym::parse_into, Self::Sym),
                     or_else(
-                        map(move |input| Id::parse_into(input), |v| Self::Identifier(v)),
-                        map(
-                            move |input| Keyword::parse_into(input),
-                            |v| Self::Keyword(v),
-                        ),
+                        map(Id::parse_into, Self::Identifier),
+                        map(Keyword::parse_into, Self::Keyword),
                     ),
                 ),
             ),
@@ -249,7 +242,7 @@ impl From<IntConst> for Token {
 }
 
 impl XmlFormattable for Token {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         match self {
             Self::Keyword(value) => value.xml_elem(),
             Self::Sym(value) => value.xml_elem(),
@@ -298,24 +291,21 @@ impl<'a> Parses<'a> for TokenStream {
         Self::Input: 'a,
     {
         map(
-            range(
-                right(ok(comspace()), move |input| Token::parse_into(input)),
-                0..,
-            ),
-            |tokens| Self::new(tokens),
+            range(right(ok(comspace()), Token::parse_into), 0..),
+            Self::new,
         )
         .parse(input)
     }
 }
 
 impl Display for TokenStream {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         Ok(())
     }
 }
 
 impl XmlFormattable for TokenStream {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "tokens"
     }
 

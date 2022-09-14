@@ -31,7 +31,7 @@ impl<'a> Parses<'a> for SubroutineKind {
 }
 
 impl XmlFormattable for SubroutineKind {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         match self {
             Self::Constructor => Keyword::Constructor.xml_elem(),
             Self::Function => Keyword::Function.xml_elem(),
@@ -66,7 +66,7 @@ impl<'a> Parses<'a> for ReturnType {
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {
         or_else(
             map(Keyword::Void, |_| Self::Void),
-            map(move |input| Type::parse_into(input), |t| Self::Returns(t)),
+            map(Type::parse_into, Self::Returns),
         )
         .parse(input)
     }
@@ -92,7 +92,7 @@ impl XmlFormattable for ReturnType {
         }
     }
 
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         match self {
             Self::Void => Keyword::Void.xml_elem(),
             Self::Returns(value) => value.xml_elem(),
@@ -117,24 +117,20 @@ impl SubroutineParameter {
         Self { var_type, var_name }
     }
 
-    pub fn var_type<'a>(&'a self) -> &'a Type {
+    pub fn var_type(&self) -> &Type {
         &self.var_type
     }
 
-    pub fn var_name<'a>(&'a self) -> &'a Id {
+    pub fn var_name(&self) -> &Id {
         &self.var_name
     }
 }
 impl<'a> Parses<'a> for SubroutineParameter {
     type Input = &'a [Token];
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {
-        map(
-            pair(
-                move |input| Type::parse_into(input),
-                move |input| Token::id(input),
-            ),
-            |(var_type, var_name)| Self::new(var_type, var_name),
-        )
+        map(pair(Type::parse_into, Token::id), |(var_type, var_name)| {
+            Self::new(var_type, var_name)
+        })
         .parse(input)
     }
 }
@@ -155,7 +151,7 @@ impl ParameterList {
         Self { vars }
     }
 
-    pub fn vars<'a>(&'a self) -> &'a [SubroutineParameter] {
+    pub fn vars(&self) -> &[SubroutineParameter] {
         &self.vars
     }
 }
@@ -164,13 +160,8 @@ impl<'a> Parses<'a> for ParameterList {
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {
         map(
             ok(pair(
-                move |input| SubroutineParameter::parse_into(input),
-                range(
-                    right(Sym::Comma, move |input| {
-                        SubroutineParameter::parse_into(input)
-                    }),
-                    0..,
-                ),
+                SubroutineParameter::parse_into,
+                range(right(Sym::Comma, SubroutineParameter::parse_into), 0..),
             )),
             |vars_o: Option<(SubroutineParameter, Vec<SubroutineParameter>)>| {
                 Self::new(
@@ -178,7 +169,7 @@ impl<'a> Parses<'a> for ParameterList {
                         .map(|(var, vars)| -> Vec<SubroutineParameter> {
                             vec![vec![var], vars].concat()
                         })
-                        .unwrap_or_else(Vec::new),
+                        .unwrap_or_default(),
                 )
             },
         )
@@ -205,7 +196,7 @@ impl From<(Type, Id)> for ParameterList {
 }
 
 impl XmlFormattable for ParameterList {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "parameterList"
     }
 
@@ -254,11 +245,11 @@ impl VarDec {
         }
     }
 
-    pub fn var_type<'a>(&'a self) -> &'a Type {
+    pub fn var_type(&self) -> &Type {
         &self.var_type
     }
 
-    pub fn var_names<'a>(&'a self) -> Vec<&'a Id> {
+    pub fn var_names(&self) -> Vec<&Id> {
         vec![vec![&self.var_name], self.var_names.iter().collect()].concat()
     }
 }
@@ -269,12 +260,9 @@ impl<'a> Parses<'a> for VarDec {
             right(
                 Keyword::Var,
                 pair(
-                    move |input| Type::parse_into(input),
+                    Type::parse_into,
                     left(
-                        pair(
-                            move |input| Token::id(input),
-                            range(right(Sym::Comma, move |input| Token::id(input)), 0..),
-                        ),
+                        pair(Token::id, range(right(Sym::Comma, Token::id), 0..)),
                         Sym::Semi,
                     ),
                 ),
@@ -323,7 +311,7 @@ impl XmlFormattable for VarDec {
         <symbol> ; </symbol>
       </varDec>
      */
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "varDec"
     }
 
@@ -357,7 +345,7 @@ impl SubroutineBody {
         }
     }
 
-    pub fn vars<'a>(&'a self) -> &'a [VarDec] {
+    pub fn vars(&self) -> &[VarDec] {
         &self.var_decs
     }
 
@@ -372,10 +360,7 @@ impl<'a> Parses<'a> for SubroutineBody {
             right(
                 Sym::LCurly,
                 left(
-                    pair(
-                        range(move |input| VarDec::parse_into(input), 0..),
-                        move |input| Statements::parse_into(input),
-                    ),
+                    pair(range(VarDec::parse_into, 0..), Statements::parse_into),
                     Sym::RCurly,
                 ),
             ),
@@ -398,7 +383,7 @@ impl From<Statements> for SubroutineBody {
 }
 
 impl XmlFormattable for SubroutineBody {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "subroutineBody"
     }
 
@@ -465,18 +450,6 @@ impl SubroutineDec {
     pub fn body(&self) -> &SubroutineBody {
         &self.body
     }
-
-    pub fn is_function(&self) -> bool {
-        matches!(self.kind(), SubroutineKind::Function)
-    }
-
-    pub fn is_method(&self) -> bool {
-        matches!(self.kind(), SubroutineKind::Method)
-    }
-
-    pub fn is_constructor(&self) -> bool {
-        matches!(self.kind(), SubroutineKind::Constructor)
-    }
 }
 
 impl<'a> Parses<'a> for SubroutineDec {
@@ -484,17 +457,14 @@ impl<'a> Parses<'a> for SubroutineDec {
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {
         map(
             pair(
-                move |input| SubroutineKind::parse_into(input),
+                SubroutineKind::parse_into,
                 pair(
-                    move |input| ReturnType::parse_into(input),
+                    ReturnType::parse_into,
                     pair(
-                        move |input| Token::id(input),
+                        Token::id,
                         pair(
-                            right(
-                                Sym::LRound,
-                                left(move |input| ParameterList::parse_into(input), Sym::RRound),
-                            ),
-                            move |input| SubroutineBody::parse_into(input),
+                            right(Sym::LRound, left(ParameterList::parse_into, Sym::RRound)),
+                            SubroutineBody::parse_into,
                         ),
                     ),
                 ),
@@ -506,7 +476,7 @@ impl<'a> Parses<'a> for SubroutineDec {
 }
 
 impl XmlFormattable for SubroutineDec {
-    fn xml_elem<'a>(&'a self) -> &str {
+    fn xml_elem(&self) -> &str {
         "subroutineDec"
     }
 

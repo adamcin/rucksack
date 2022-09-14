@@ -13,11 +13,8 @@ pub(crate) mod testutil {
         result: ParseResult<'a, &'a [Token], R>,
     ) -> Result<R, Option<Token>> {
         result
-            .map_err(|value| {
-                println!("result: {:?}", value);
-                value.first().cloned()
-            })
-            .map(|(rem, value)| value)
+            .map_err(|value| value.first().cloned())
+            .map(|(_, value)| value)
     }
 
     pub fn assert_tokens<F, R>(pairs: Vec<(&str, Result<R, Option<Token>>)>, pf: F)
@@ -28,7 +25,7 @@ pub(crate) mod testutil {
         pairs.into_iter().for_each(|(source, expected)| {
             let src_str = source.to_owned();
             let (_, stream) = TokenStream::parse_into(src_str.as_str())
-                .expect(format!("failed to tokenize {}", source).as_str());
+                .unwrap_or_else(|_| panic!("failed to tokenize {}", source));
             let result = pf(stream.tokens());
             assert_eq!(expected, result);
         });
@@ -38,16 +35,15 @@ pub(crate) mod testutil {
     where
         P: AsRef<Path> + Debug,
     {
-        read_to_string(&path).expect(
-            format!(
+        read_to_string(&path).unwrap_or_else(|_| {
+            panic!(
                 "read_test_file failed to read path {:?} from current directory {}",
                 &path,
                 std::path::absolute(".")
                     .expect("failed to get absolute path of current directory")
                     .display(),
             )
-            .as_str(),
-        )
+        })
     }
 
     pub fn read_class<P>(jack_file: P) -> Result<Class, String>

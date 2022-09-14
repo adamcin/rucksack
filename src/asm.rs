@@ -502,7 +502,7 @@ pub struct ASMUnit {
 impl Unit for ASMUnit {
     type Syntax = ASMParsed;
 
-    fn src_path<'a>(&'a self) -> &'a str {
+    fn src_path(&self) -> &str {
         self.src_path.as_str()
     }
 }
@@ -574,7 +574,7 @@ impl HackUnit {
 impl Unit for HackUnit {
     type Syntax = HackSyntax;
 
-    fn src_path<'a>(&'a self) -> &'a str {
+    fn src_path(&self) -> &str {
         self.src_path.as_str()
     }
 }
@@ -593,7 +593,7 @@ impl FileUnit for HackUnit {
 pub struct HackParser {}
 
 impl<'a> Parser<'a, &'a str, Vec<String>> for HackParser {
-    fn parse(&self, input: &'a str) -> ParseResult<'a, &'a str, Vec<String>> {
+    fn parse(&self, _input: &'a str) -> ParseResult<'a, &'a str, Vec<String>> {
         unimplemented!()
     }
 }
