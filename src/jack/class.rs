@@ -8,7 +8,6 @@ use super::subroutine::*;
 use super::sym::Sym;
 use super::token::Token;
 use super::typea::Type;
-use super::xmlformat::{XmlBody, XmlF, XmlFormattable};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ClassVarKind {
@@ -35,19 +34,7 @@ impl<'a> Parses<'a> for ClassVarKind {
         .parse(input)
     }
 }
-impl XmlFormattable for ClassVarKind {
-    fn xml_elem(&self) -> &str {
-        "keyword"
-    }
 
-    fn xml_body_type(&self) -> XmlBody {
-        XmlBody::Inline
-    }
-
-    fn xml_inline_body(&self) -> String {
-        self.as_keyword().xml_inline_body()
-    }
-}
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ClassVarDec {
     var_kind: ClassVarKind,
@@ -100,27 +87,6 @@ impl<'a> Parses<'a> for ClassVarDec {
     }
 }
 
-impl XmlFormattable for ClassVarDec {
-    fn xml_elem(&self) -> &str {
-        "classVarDec"
-    }
-
-    fn write_xml_body<'a>(
-        &self,
-        xmlf: &XmlF<'a, Self>,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
-        xmlf.write_child(f, &self.var_kind)?;
-        xmlf.write_child(f, &self.var_type)?;
-        xmlf.write_child(f, &self.var_name)?;
-        for name in self.var_names.iter() {
-            xmlf.write_child(f, &Sym::Comma)?;
-            xmlf.write_child(f, name)?;
-        }
-        xmlf.write_child(f, &Sym::Semi)?;
-        Ok(())
-    }
-}
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Class {
     name: Id,
@@ -131,6 +97,10 @@ pub struct Class {
 impl Class {
     pub fn new(name: Id, vars: Vec<ClassVarDec>, subs: Vec<SubroutineDec>) -> Self {
         Self { name, vars, subs }
+    }
+
+    pub fn id(&self) -> &Id {
+        &self.name
     }
 
     pub fn name(&self) -> &str {
@@ -171,29 +141,6 @@ impl<'a> Parses<'a> for Class {
     }
 }
 
-impl XmlFormattable for Class {
-    fn xml_elem(&self) -> &str {
-        "class"
-    }
-
-    fn write_xml_body<'a>(
-        &self,
-        xmlf: &XmlF<'a, Self>,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
-        xmlf.write_child(f, &Keyword::Class)?;
-        xmlf.write_child(f, &self.name)?;
-        xmlf.write_child(f, &Sym::LCurly)?;
-        for var in self.vars.iter() {
-            xmlf.write_child(f, var)?;
-        }
-        for dec in self.subs.iter() {
-            xmlf.write_child(f, dec)?;
-        }
-        xmlf.write_child(f, &Sym::RCurly)?;
-        Ok(())
-    }
-}
 impl Display for Class {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} {} {}", &Keyword::Class, self.name, &Sym::LCurly)?;

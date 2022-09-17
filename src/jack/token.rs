@@ -2,12 +2,7 @@ use std::fmt::Display;
 
 use crate::parse::*;
 
-use super::{
-    id::Id,
-    keyword::Keyword,
-    sym::Sym,
-    xmlformat::{XmlBody, XmlF, XmlFormattable},
-};
+use super::{id::Id, keyword::Keyword, sym::Sym};
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct IntConst(i16);
@@ -62,20 +57,6 @@ impl TryFrom<i16> for IntConst {
     }
 }
 
-impl XmlFormattable for IntConst {
-    fn xml_elem(&self) -> &str {
-        "integerConstant"
-    }
-
-    fn xml_inline_body(&self) -> String {
-        format!("{}", self.0)
-    }
-
-    fn xml_body_type(&self) -> XmlBody {
-        XmlBody::Inline
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct StringConst(Vec<u8>);
 impl StringConst {
@@ -126,20 +107,6 @@ impl<'a> Parses<'a> for StringConst {
 impl From<&str> for StringConst {
     fn from(item: &str) -> Self {
         Self::new(item.to_owned())
-    }
-}
-
-impl XmlFormattable for StringConst {
-    fn xml_elem(&self) -> &str {
-        "stringConstant"
-    }
-
-    fn xml_inline_body(&self) -> String {
-        self.value()
-    }
-
-    fn xml_body_type(&self) -> XmlBody {
-        XmlBody::Inline
     }
 }
 
@@ -241,32 +208,6 @@ impl From<IntConst> for Token {
     }
 }
 
-impl XmlFormattable for Token {
-    fn xml_elem(&self) -> &str {
-        match self {
-            Self::Keyword(value) => value.xml_elem(),
-            Self::Sym(value) => value.xml_elem(),
-            Self::Identifier(value) => value.xml_elem(),
-            Self::StringConst(value) => value.xml_elem(),
-            Self::IntConst(value) => value.xml_elem(),
-        }
-    }
-
-    fn xml_body_type(&self) -> XmlBody {
-        XmlBody::Inline
-    }
-
-    fn xml_inline_body(&self) -> String {
-        match self {
-            Self::Keyword(keyword) => keyword.xml_inline_body(),
-            Self::Sym(sym) => sym.xml_inline_body(),
-            Self::Identifier(id) => id.xml_inline_body(),
-            Self::StringConst(value) => value.xml_inline_body(),
-            Self::IntConst(value) => value.xml_inline_body(),
-        }
-    }
-}
-
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct TokenStream {
     tokens: Vec<Token>,
@@ -300,23 +241,6 @@ impl<'a> Parses<'a> for TokenStream {
 
 impl Display for TokenStream {
     fn fmt(&self, _f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        Ok(())
-    }
-}
-
-impl XmlFormattable for TokenStream {
-    fn xml_elem(&self) -> &str {
-        "tokens"
-    }
-
-    fn write_xml_body<'a>(
-        &self,
-        xmlf: &XmlF<'a, Self>,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
-        for token in self.tokens.iter() {
-            xmlf.write_child(f, token)?;
-        }
         Ok(())
     }
 }

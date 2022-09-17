@@ -1623,7 +1623,7 @@ impl<'a> Parser<'a, &'a str, VMLine> for VMLineParser {
 pub struct VMTranslator {}
 
 impl VMTranslator {
-    pub fn do_main(args: Vec<&str>) -> Result<(), Error> {
+    pub fn do_main(args: &[String]) -> Result<(), Error> {
         if args.is_empty() {
             Self::do_unit(".")?;
         } else {

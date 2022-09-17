@@ -7,7 +7,6 @@ use super::{
     keyword::Keyword,
     sym::Sym,
     token::{IntConst, StringConst, Token},
-    xmlformat::{XmlF, XmlFormattable},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -275,51 +274,6 @@ impl From<Expression> for Term {
     }
 }
 
-impl XmlFormattable for Term {
-    fn xml_elem(&self) -> &str {
-        "term"
-    }
-
-    fn write_xml_body<'a>(
-        &self,
-        xmlf: &XmlF<'a, Self>,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
-        match self {
-            Self::VarName(id) => xmlf.write_child(f, id)?,
-            Self::VarSub(id, expr) => {
-                xmlf.write_child(f, id)?;
-                xmlf.write_child(f, &Sym::LSquare)?;
-                xmlf.write_child(f, expr.as_ref())?;
-                xmlf.write_child(f, &Sym::RSquare)?;
-            }
-            Self::StringConst(value) => xmlf.write_child(f, value)?,
-            Self::IntConst(value) => xmlf.write_child(f, value)?,
-            Self::KeywordConst(value) => xmlf.write_child(f, &value.as_keyword())?,
-            Self::UnaryOp(op) => {
-                xmlf.write_child(f, &op.as_sym())?;
-                xmlf.write_child(f, op.term())?;
-            }
-            Self::Expr(expr) => {
-                xmlf.write_child(f, &Sym::LRound)?;
-                xmlf.write_child(f, expr.as_ref())?;
-                xmlf.write_child(f, &Sym::RRound)?;
-            }
-            Self::SubroutineCall(call) => {
-                if let Some(qual) = call.qualifier.as_ref() {
-                    xmlf.write_child(f, qual)?;
-                    xmlf.write_child(f, &Sym::Dot)?;
-                }
-                xmlf.write_child(f, &call.name)?;
-                xmlf.write_child(f, &Sym::LRound)?;
-                xmlf.write_child(f, &call.exprs)?;
-                xmlf.write_child(f, &Sym::RRound)?;
-            }
-        };
-        Ok(())
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Expression {
     term: Term,
@@ -424,25 +378,6 @@ impl From<Call> for Expression {
     }
 }
 
-impl XmlFormattable for Expression {
-    fn xml_elem(&self) -> &str {
-        "expression"
-    }
-
-    fn write_xml_body<'a>(
-        &self,
-        xmlf: &XmlF<'a, Self>,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
-        xmlf.write_child(f, &self.term)?;
-        for op in self.ops.iter() {
-            xmlf.write_child(f, &op.as_sym())?;
-            xmlf.write_child(f, op.term())?;
-        }
-        Ok(())
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ExpressionList {
     exprs: Vec<Expression>,
@@ -496,29 +431,6 @@ impl<'a> IntoIterator for &'a ExpressionList {
 
     fn into_iter(self) -> Self::IntoIter {
         self.iter()
-    }
-}
-
-impl XmlFormattable for ExpressionList {
-    fn xml_elem(&self) -> &str {
-        "expressionList"
-    }
-
-    fn write_xml_body<'a>(
-        &self,
-        xmlf: &XmlF<'a, Self>,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
-        let mut first = true;
-        for expr in self.exprs.iter() {
-            if !first {
-                xmlf.write_child(f, &Sym::Comma)?;
-            } else {
-                first = false;
-            }
-            xmlf.write_child(f, expr)?;
-        }
-        Ok(())
     }
 }
 
@@ -591,7 +503,7 @@ pub enum KeywordConst {
     This,
 }
 impl KeywordConst {
-    fn as_keyword(&self) -> Keyword {
+    pub fn as_keyword(&self) -> Keyword {
         match self {
             Self::True => Keyword::True,
             Self::False => Keyword::False,

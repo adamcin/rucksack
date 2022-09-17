@@ -8,21 +8,18 @@ use super::{
 };
 
 pub struct SubApi {
-    name: String,
     kind: SubroutineKind,
 }
 
 impl SubApi {
     pub fn new(sub_dec: &SubroutineDec) -> Self {
         Self {
-            name: sub_dec.name().as_str().to_owned(),
             kind: sub_dec.kind().clone(),
         }
     }
 }
 
 pub struct ClassApi {
-    name: String,
     subs: HashMap<String, SubApi>,
 }
 
@@ -33,10 +30,7 @@ impl ClassApi {
             .iter()
             .map(|sub_dec| (sub_dec.name().as_str().to_owned(), SubApi::new(sub_dec)))
             .collect();
-        Self {
-            name: class.name().to_owned(),
-            subs,
-        }
+        Self { subs }
     }
 }
 

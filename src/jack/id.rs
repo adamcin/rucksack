@@ -4,7 +4,6 @@ use crate::common::err_invalid_input;
 use crate::parse::*;
 
 use super::keyword::Keyword;
-use super::xmlformat::XmlFormattable;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Id(String);
@@ -75,20 +74,6 @@ impl<'a> Parses<'a> for Id {
             },
         )
         .parse(input)
-    }
-}
-
-impl XmlFormattable for Id {
-    fn xml_body_type(&self) -> super::xmlformat::XmlBody {
-        super::xmlformat::XmlBody::Inline
-    }
-
-    fn xml_elem(&self) -> &str {
-        "identifier"
-    }
-
-    fn xml_inline_body(&self) -> String {
-        (self.0).to_owned()
     }
 }
 

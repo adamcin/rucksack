@@ -90,7 +90,6 @@ impl VarKind {
 
 #[derive(Debug)]
 pub struct Var {
-    name: String,
     kind: VarKind,
     typa: Type,
     index: i16,
@@ -98,19 +97,16 @@ pub struct Var {
 
 impl Var {
     pub fn push(&self) -> Vec<VMLine> {
-        vec![VMLine::Push(self.kind.push_segment(), self.index)]
+        vec![VMLine::Push(self.kind().push_segment(), self.index())]
     }
     pub fn pop(&self) -> Vec<VMLine> {
-        vec![VMLine::Pop(self.kind.pop_segment(), self.index)]
+        vec![VMLine::Pop(self.kind().pop_segment(), self.index())]
     }
     pub fn kind(&self) -> &VarKind {
         &self.kind
     }
     pub fn var_type(&self) -> &Type {
         &self.typa
-    }
-    pub fn name(&self) -> &str {
-        &self.name
     }
     pub fn index(&self) -> i16 {
         self.index
@@ -165,7 +161,6 @@ impl<'a> ClassVarTable<'a> {
         self.vars.insert(
             name.to_string(),
             Var {
-                name: name.to_string(),
                 kind: VarKind::Field,
                 typa,
                 index: self.n_field.try_into().map_err(|err| {
@@ -181,7 +176,6 @@ impl<'a> ClassVarTable<'a> {
         self.vars.insert(
             name.to_string(),
             Var {
-                name: name.to_string(),
                 kind: VarKind::Static,
                 typa,
                 index: self.n_static.try_into().map_err(|err| {
@@ -297,7 +291,6 @@ impl<'a, 'b> SubVarTable<'a, 'b> {
         self.vars.insert(
             Keyword::This.as_str().to_owned(),
             Var {
-                name: Keyword::This.as_str().to_owned(),
                 kind: VarKind::This,
                 typa: Type::ClassName(Id::from(self.class_vars.name())),
                 index: self
@@ -316,7 +309,6 @@ impl<'a, 'b> SubVarTable<'a, 'b> {
         self.vars.insert(
             name.to_string(),
             Var {
-                name: name.to_string(),
                 kind: VarKind::Arg,
                 typa,
                 index: self.n_arg.try_into().map_err(|err| {
@@ -332,7 +324,6 @@ impl<'a, 'b> SubVarTable<'a, 'b> {
         self.vars.insert(
             name.to_string(),
             Var {
-                name: name.to_string(),
                 kind: VarKind::Local,
                 typa,
                 index: self.n_local.try_into().map_err(|err| {
@@ -484,7 +475,6 @@ mod tests {
                 assert_eq!(&0, &var.index);
                 assert_eq!(&VarKind::Field, &var.kind);
                 assert_eq!(&Type::ClassName(Id::from("Square")), &var.typa);
-                assert_eq!("square", &var.name);
             }
 
             let r_var_direction = class_vars.var(&Id::from("direction"));
@@ -493,7 +483,6 @@ mod tests {
                 assert_eq!(&1, &var.index);
                 assert_eq!(&VarKind::Field, &var.kind);
                 assert_eq!(&Type::Int, &var.typa);
-                assert_eq!("direction", &var.name);
             }
 
             let sub_dec_new = classes
@@ -539,7 +528,6 @@ mod tests {
                         &Type::ClassName(Id::from(class_vars.name())),
                         var.var_type()
                     );
-                    assert_eq!("this", var.name());
                 }
                 let r_var_key = sub_vars.var(&Id::from("key"));
                 assert!(r_var_key.is_ok());
@@ -547,7 +535,6 @@ mod tests {
                     assert_eq!(&0, &var.index());
                     assert_eq!(&VarKind::Local, var.kind());
                     assert_eq!(&Type::Char, var.var_type());
-                    assert_eq!("key", var.name());
                 }
                 let r_var_exit = sub_vars.var(&Id::from("exit"));
                 assert!(r_var_exit.is_ok());
@@ -555,7 +542,6 @@ mod tests {
                     assert_eq!(&1, &var.index());
                     assert_eq!(&VarKind::Local, var.kind());
                     assert_eq!(&Type::Boolean, var.var_type());
-                    assert_eq!("exit", var.name());
                 }
             }
         }

@@ -1,6 +1,7 @@
+pub(crate) mod analyze;
 mod class;
 mod common;
-mod compile;
+pub(crate) mod compile;
 mod expression;
 mod id;
 mod keyword;
@@ -9,7 +10,6 @@ mod subroutine;
 mod sym;
 mod token;
 mod typea;
-mod xmlformat;
 use std::fs::DirEntry;
 use std::io::Error;
 use std::path::Path;
@@ -19,7 +19,6 @@ use crate::parse::*;
 use crate::vm::{VMDirUnit, VMUnit, VMUnitFactory, VMUnitType};
 
 use self::class::Class;
-use self::compile::JackCompiler;
 use self::token::TokenStream;
 
 pub struct JackFileUnit {
@@ -185,56 +184,5 @@ impl UnitFactory for JackUnitFactory {
                 path
             )))
         }
-    }
-}
-
-pub struct JackAnalyzer {}
-
-impl JackAnalyzer {
-    pub fn do_main(args: Vec<&str>) -> Result<(), Error> {
-        if args.is_empty() {
-            Self::do_unit(".")?;
-        } else {
-            for arg in args {
-                Self::do_unit(arg)?;
-            }
-        }
-        Ok(())
-    }
-
-    fn do_unit(path: &str) -> Result<(), Error> {
-        let unit = JackUnitFactory::unit_from(path)
-            .unwrap_or_else(|err| panic!("failed to read unit {}, error: {:?}", path, err));
-        let classes = unit.parse()?;
-        let vm_unit = unit.out_unit()?;
-        let compiler = JackCompiler {};
-        let parseds = compiler
-            .compile(classes)
-            .map_err(|err| err_invalid_input(format!("unit {} compile error: {:?}", path, err)))?;
-        vm_unit.save(&parseds)?;
-        Ok(())
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use super::*;
-
-    #[test]
-    fn analyze_11() {
-        let dirs = vec![
-            "data/11/Average",
-            "data/11/ComplexArrays",
-            "data/11/ConvertToBin",
-            "data/11/Pong",
-            "data/11/Seven",
-            "data/11/Square",
-        ];
-
-        let result = JackAnalyzer::do_main(dirs.to_vec());
-        if let Err(error) = &result {
-            println!("analyze_11 error: {:?}", error);
-        }
-        assert!(&result.is_ok());
     }
 }

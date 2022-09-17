@@ -94,10 +94,6 @@ where
 mod tests {
     use std::fmt::Debug;
 
-    use crate::jack::token::TokenStream;
-    use crate::jack::{class::Class, common::testutil::read_test_file};
-    use crate::parse::*;
-
     use super::{XmlF, XmlFormattable};
 
     #[derive(Debug)]
@@ -128,48 +124,5 @@ mod tests {
             "  <simple> chars </simple>\n".to_owned(),
             format!("{}", XmlF::new(&simple, 2, 2))
         );
-    }
-
-    #[test]
-    fn xml_out_tokens() {
-        let jack_files = vec![
-            "data/10/ArrayTest/Main.jack",
-            "data/10/ExpressionLessSquare/Main.jack",
-            "data/10/ExpressionLessSquare/Square.jack",
-            "data/10/ExpressionLessSquare/SquareGame.jack",
-            "data/10/Square/Main.jack",
-            "data/10/Square/Square.jack",
-            "data/10/Square/SquareGame.jack",
-        ];
-
-        for jack_file in jack_files {
-            let token_path = jack_file.replace(".jack", "T.xml");
-            let syntax_path = jack_file.replace(".jack", ".xml");
-            let source = read_test_file(jack_file).trim().to_owned();
-            let expected_tokens = read_test_file(token_path.as_str()).trim().to_owned();
-            let expected_syntax = read_test_file(syntax_path.as_str()).trim().to_owned();
-
-            let (_, stream) = TokenStream::parse_into(source.as_str()).expect("");
-            let fmtter_tokens = XmlF::new(&stream, 0, 0);
-            let formatted_tokens = format!("{}", fmtter_tokens).trim().to_owned();
-            for (n, (expect, actual)) in expected_tokens
-                .lines()
-                .zip(formatted_tokens.lines())
-                .enumerate()
-            {
-                assert_eq!(expect, actual, "line {} in {}", n + 1, token_path.as_str());
-            }
-
-            let (_, syntax) = Class::parse_into(stream.tokens()).expect("");
-            let fmtter_syntax = XmlF::new(&syntax, 0, 2);
-            let formatted_syntax = format!("{}", fmtter_syntax).trim().to_owned();
-            for (n, (expect, actual)) in expected_syntax
-                .lines()
-                .zip(formatted_syntax.lines())
-                .enumerate()
-            {
-                assert_eq!(expect, actual, "line {} in {}", n + 1, syntax_path.as_str());
-            }
-        }
     }
 }

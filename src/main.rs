@@ -9,7 +9,8 @@ mod symbol;
 mod vm;
 
 use asm::HackAssembler;
-use jack::JackAnalyzer;
+use jack::analyze::JackAnalyzer;
+use jack::compile::JackCompiler;
 use vm::VMTranslator;
 
 #[derive(PartialEq, Eq)]
@@ -17,6 +18,7 @@ enum Command {
     HackAssembler,
     VMTranslator,
     JackAnalyzer,
+    JackCompiler,
     Unknown,
 }
 
@@ -26,6 +28,7 @@ impl From<&str> for Command {
             "HackAssembler" => Self::HackAssembler,
             "VMTranslator" => Self::VMTranslator,
             "JackAnalyzer" => Self::JackAnalyzer,
+            "JackCompiler" => Self::JackCompiler,
             _ => Self::Unknown,
         }
     }
@@ -37,6 +40,7 @@ impl Command {
             &Self::HackAssembler => "HackAssembler",
             &Self::VMTranslator => "VMTranslator",
             &Self::JackAnalyzer => "JackAnalyzer",
+            &Self::JackCompiler => "JackCompiler",
             &Self::Unknown => "Unknown",
         }
     }
@@ -50,16 +54,15 @@ fn main() {
         .expect("the first argument must be a supported command");
     let cmd_args: Vec<String> = std::env::args().skip(2).collect();
     match command {
-        Command::HackAssembler => {
-            HackAssembler::do_main(cmd_args.iter().map(|arg| arg.as_str()).collect())
-        }
+        Command::HackAssembler => HackAssembler::do_main(cmd_args.as_slice()),
         Command::VMTranslator => {
-            VMTranslator::do_main(cmd_args.iter().map(|arg| arg.as_str()).collect())
-                .expect("failed to run");
+            VMTranslator::do_main(cmd_args.as_slice()).expect("failed to run");
         }
         Command::JackAnalyzer => {
-            JackAnalyzer::do_main(cmd_args.iter().map(|arg| arg.as_str()).collect())
-                .expect("failed to run");
+            JackAnalyzer::do_main(cmd_args.as_slice()).expect("failed to run");
+        }
+        Command::JackCompiler => {
+            JackCompiler::do_main(cmd_args.as_slice()).expect("failed to run");
         }
         _ => panic!("unsupported command: {}", command.name()),
     }

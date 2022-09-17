@@ -2,7 +2,7 @@ use std::fmt::Display;
 
 use crate::parse::*;
 
-use super::{token::Token, xmlformat::XmlFormattable};
+use super::token::Token;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Keyword {
@@ -126,20 +126,6 @@ impl<'a> Parses<'a> for Keyword {
     }
 }
 
-impl XmlFormattable for Keyword {
-    fn xml_body_type(&self) -> super::xmlformat::XmlBody {
-        super::xmlformat::XmlBody::Inline
-    }
-
-    fn xml_elem(&self) -> &str {
-        "keyword"
-    }
-
-    fn xml_inline_body(&self) -> String {
-        self.as_str().to_owned()
-    }
-}
-
 impl Display for Keyword {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.as_str())
@@ -147,7 +133,6 @@ impl Display for Keyword {
 }
 #[cfg(test)]
 mod tests {
-    use crate::jack::xmlformat::XmlF;
 
     use super::*;
     #[test]
@@ -156,11 +141,5 @@ mod tests {
             Ok(("", Keyword::Boolean)),
             Keyword::Boolean.parse("boolean")
         );
-    }
-
-    #[test]
-    fn test_xml_fmt() {
-        let xmlout = format!("{}", XmlF::new(&Keyword::Class, 0, 0));
-        assert_eq!("<keyword> class </keyword>\n", &xmlout);
     }
 }

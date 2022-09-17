@@ -538,12 +538,6 @@ impl ASMUnit {
         Self { src_path }
     }
 
-    fn copy(&self) -> Self {
-        Self {
-            src_path: String::from(&self.src_path),
-        }
-    }
-
     pub fn out_unit(&self) -> HackUnit {
         HackUnit::new(
             self.src_path()
@@ -743,10 +737,6 @@ impl<'p> SecondPass {
         return self.stripped.iter().map(|line| line).collect();
     }
 
-    fn into_asm(self) -> Vec<ASMLine> {
-        self.stripped
-    }
-
     fn to_hack(&self) -> HackSyntax {
         HackSyntax {
             lines: self
@@ -817,7 +807,7 @@ impl<'a> Parser<'a, &'a str, Vec<ASMLine>> for ASMParser {
 pub struct HackAssembler {}
 
 impl HackAssembler {
-    pub fn do_main(args: Vec<&str>) {
+    pub fn do_main(args: &[String]) {
         for arg in args {
             Self::do_unit(arg);
         }

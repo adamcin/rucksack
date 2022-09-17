@@ -8,7 +8,6 @@ use super::statement::{Statement, Statements};
 use super::sym::Sym;
 use super::token::Token;
 use super::typea::Type;
-use super::xmlformat::{XmlF, XmlFormattable};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum SubroutineKind {
@@ -27,32 +26,6 @@ impl<'a> Parses<'a> for SubroutineKind {
             ),
         )
         .parse(input)
-    }
-}
-
-impl XmlFormattable for SubroutineKind {
-    fn xml_elem(&self) -> &str {
-        match self {
-            Self::Constructor => Keyword::Constructor.xml_elem(),
-            Self::Function => Keyword::Function.xml_elem(),
-            Self::Method => Keyword::Method.xml_elem(),
-        }
-    }
-
-    fn xml_inline_body(&self) -> String {
-        match self {
-            Self::Constructor => Keyword::Constructor.xml_inline_body(),
-            Self::Function => Keyword::Function.xml_inline_body(),
-            Self::Method => Keyword::Method.xml_inline_body(),
-        }
-    }
-
-    fn xml_body_type(&self) -> super::xmlformat::XmlBody {
-        match self {
-            Self::Constructor => Keyword::Constructor.xml_body_type(),
-            Self::Function => Keyword::Function.xml_body_type(),
-            Self::Method => Keyword::Method.xml_body_type(),
-        }
     }
 }
 
@@ -81,29 +54,6 @@ impl From<Type> for ReturnType {
 impl From<Id> for ReturnType {
     fn from(item: Id) -> Self {
         Self::Returns(Type::ClassName(item))
-    }
-}
-
-impl XmlFormattable for ReturnType {
-    fn xml_inline_body(&self) -> String {
-        match self {
-            Self::Void => Keyword::Void.xml_inline_body(),
-            Self::Returns(value) => value.xml_inline_body(),
-        }
-    }
-
-    fn xml_elem(&self) -> &str {
-        match self {
-            Self::Void => Keyword::Void.xml_elem(),
-            Self::Returns(value) => value.xml_elem(),
-        }
-    }
-
-    fn xml_body_type(&self) -> super::xmlformat::XmlBody {
-        match self {
-            Self::Void => Keyword::Void.xml_body_type(),
-            Self::Returns(value) => value.xml_body_type(),
-        }
     }
 }
 
@@ -195,33 +145,6 @@ impl From<(Type, Id)> for ParameterList {
     }
 }
 
-impl XmlFormattable for ParameterList {
-    fn xml_elem(&self) -> &str {
-        "parameterList"
-    }
-
-    fn xml_body_type(&self) -> super::xmlformat::XmlBody {
-        super::xmlformat::XmlBody::Expanded
-    }
-
-    fn write_xml_body<'a>(
-        &self,
-        xmlf: &XmlF<'a, Self>,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
-        let mut first = true;
-        for param in self.vars.iter() {
-            if !first {
-                xmlf.write_child(f, &Sym::Comma)?;
-            }
-            first = false;
-            xmlf.write_child(f, &param.var_type)?;
-            xmlf.write_child(f, &param.var_name)?;
-        }
-        Ok(())
-    }
-}
-
 impl<'a> IntoIterator for &'a ParameterList {
     type Item = &'a SubroutineParameter;
     type IntoIter = Iter<'a, SubroutineParameter>;
@@ -300,38 +223,6 @@ impl From<(Type, Id, Id, Id)> for VarDec {
     }
 }
 
-impl XmlFormattable for VarDec {
-    /*
-    <varDec>
-        <keyword> var </keyword>
-        <keyword> int </keyword>
-        <identifier> i </identifier>
-        <symbol> , </symbol>
-        <identifier> sum </identifier>
-        <symbol> ; </symbol>
-      </varDec>
-     */
-    fn xml_elem(&self) -> &str {
-        "varDec"
-    }
-
-    fn write_xml_body<'a>(
-        &self,
-        xmlf: &XmlF<'a, Self>,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
-        xmlf.write_child(f, &Keyword::Var)?;
-        xmlf.write_child(f, &self.var_type)?;
-        xmlf.write_child(f, &self.var_name)?;
-        for var_name in self.var_names.iter() {
-            xmlf.write_child(f, &Sym::Comma)?;
-            xmlf.write_child(f, var_name)?;
-        }
-        xmlf.write_child(f, &Sym::Semi)?;
-        Ok(())
-    }
-}
-
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SubroutineBody {
     var_decs: Vec<VarDec>,
@@ -379,30 +270,6 @@ impl From<Statement> for SubroutineBody {
 impl From<Statements> for SubroutineBody {
     fn from(item: Statements) -> Self {
         Self::new(Vec::new(), item)
-    }
-}
-
-impl XmlFormattable for SubroutineBody {
-    fn xml_elem(&self) -> &str {
-        "subroutineBody"
-    }
-
-    fn xml_body_type(&self) -> super::xmlformat::XmlBody {
-        super::xmlformat::XmlBody::Expanded
-    }
-
-    fn write_xml_body<'a>(
-        &self,
-        xmlf: &XmlF<'a, Self>,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
-        xmlf.write_child(f, &Sym::LCurly)?;
-        for var_dec in self.var_decs.iter() {
-            xmlf.write_child(f, var_dec)?;
-        }
-        xmlf.write_child(f, &self.statements)?;
-        xmlf.write_child(f, &Sym::RCurly)?;
-        Ok(())
     }
 }
 
@@ -472,31 +339,6 @@ impl<'a> Parses<'a> for SubroutineDec {
             |(kind, (ret, (name, (params, body))))| Self::new(kind, ret, name, params, body),
         )
         .parse(input)
-    }
-}
-
-impl XmlFormattable for SubroutineDec {
-    fn xml_elem(&self) -> &str {
-        "subroutineDec"
-    }
-
-    fn xml_body_type(&self) -> super::xmlformat::XmlBody {
-        super::xmlformat::XmlBody::Expanded
-    }
-
-    fn write_xml_body<'a>(
-        &self,
-        xmlf: &XmlF<'a, Self>,
-        f: &mut std::fmt::Formatter<'_>,
-    ) -> std::fmt::Result {
-        xmlf.write_child(f, &self.kind)?;
-        xmlf.write_child(f, &self.ret)?;
-        xmlf.write_child(f, &self.name)?;
-        xmlf.write_child(f, &Sym::LRound)?;
-        xmlf.write_child(f, &self.params)?;
-        xmlf.write_child(f, &Sym::RRound)?;
-        xmlf.write_child(f, &self.body)?;
-        Ok(())
     }
 }
 
