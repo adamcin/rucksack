@@ -342,6 +342,32 @@ impl<'a> Parses<'a> for SubroutineDec {
     }
 }
 
+impl From<(SubroutineKind, ReturnType, &str)> for SubroutineDec {
+    fn from(item: (SubroutineKind, ReturnType, &str)) -> Self {
+        let (kind, ret, name) = item;
+        Self::new(
+            kind,
+            ret,
+            Id::from(name),
+            Vec::new().into(),
+            SubroutineBody::new(Vec::new(), Vec::new().into()),
+        )
+    }
+}
+
+impl From<(SubroutineKind, &str)> for SubroutineDec {
+    fn from(item: (SubroutineKind, &str)) -> Self {
+        let (kind, name) = item;
+        Self::new(
+            kind,
+            ReturnType::Void,
+            Id::from(name),
+            Vec::new().into(),
+            SubroutineBody::new(Vec::new(), Vec::new().into()),
+        )
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use crate::jack::{

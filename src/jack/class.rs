@@ -99,6 +99,14 @@ impl Class {
         Self { name, vars, subs }
     }
 
+    pub fn api(name: &str, subs: Vec<SubroutineDec>) -> Self {
+        Self {
+            name: Id::from(name),
+            vars: Vec::new(),
+            subs,
+        }
+    }
+
     pub fn id(&self) -> &Id {
         &self.name
     }
