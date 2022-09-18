@@ -459,7 +459,7 @@ mod tests {
     fn try_from_square_game() {
         let class = read_class("data/11/Square/SquareGame.jack").expect("");
         let classes = vec![class];
-        let api = Api::new(&classes);
+        let api = Api::new(&classes).expect("");
         let r_class_vars: Result<ClassVarTable, CompileError> =
             (&api, classes.first().unwrap()).try_into();
         assert!(r_class_vars.is_ok());

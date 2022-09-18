@@ -51,7 +51,10 @@ impl FileUnit for JackFileUnit {
         let result = parser.parse(stream.tokens());
         match result {
             Ok((_rem, parsed)) => Ok(parsed),
-            Err(error_at) => Err(err_invalid_input(format!("parse error at: {:?}", error_at))),
+            Err(error_at) => {
+                println!("{:?}", error_at);
+                Err(err_invalid_input(format!("parse error")))
+            }
         }
     }
 }

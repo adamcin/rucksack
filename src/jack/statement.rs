@@ -223,43 +223,75 @@ mod tests {
 
     #[test]
     fn parsing() {
-        let cases = vec![(
-            r"
-            while(index < values.size()) {
-                let total = total + values.get(index);
-                let index = index + 1;
-            }
-            ",
-            Ok(Statement::new_while(
-                (
-                    Id::from("index").into(),
-                    Op::Lt(Call::new_qual(Id::from("values"), Id::from("size")).into()),
-                )
-                    .into(),
-                vec![
-                    Statement::new_let_var(
-                        Id::from("total"),
-                        (
-                            Id::from("total").into(),
-                            Op::Plus(
-                                Call::new_qual_params(
-                                    Id::from("values"),
-                                    Id::from("get"),
-                                    vec![Id::from("index").into()].into(),
-                                )
+        let cases = vec![
+            (
+                r"
+                if (maxLength < (end + 2)) {
+                    do Sys.error(42);
+                }
+                ",
+                Ok(Statement::new_if(
+                    (
+                        Id::from("maxLength").into(),
+                        Op::Lt(Term::Expr(Box::new(
+                            (
+                                Id::from("end").into(),
+                                Op::Plus(IntConst::new(2).expect("").into()),
+                            )
                                 .into(),
-                            ),
-                        )
-                            .into(),
-                    ),
-                    Statement::new_let_var(
-                        Id::from("index"),
-                        (Id::from("index").into(), Op::Plus(IntConst::one().into())).into(),
-                    ),
-                ]
-                .into(),
-            )),
-        )];
+                        ))),
+                    )
+                        .into(),
+                    vec![Statement::new_do(Call::new_qual_params(
+                        Id::from("Sys"),
+                        Id::from("error"),
+                        vec![Expression::new(
+                            IntConst::new(42).expect("").into(),
+                            Vec::default().into(),
+                        )]
+                        .into(),
+                    ))]
+                    .into(),
+                )),
+            ),
+            (
+                r"
+                while(index < values.size()) {
+                    let total = total + values.get(index);
+                    let index = index + 1;
+                }
+                ",
+                Ok(Statement::new_while(
+                    (
+                        Id::from("index").into(),
+                        Op::Lt(Call::new_qual(Id::from("values"), Id::from("size")).into()),
+                    )
+                        .into(),
+                    vec![
+                        Statement::new_let_var(
+                            Id::from("total"),
+                            (
+                                Id::from("total").into(),
+                                Op::Plus(
+                                    Call::new_qual_params(
+                                        Id::from("values"),
+                                        Id::from("get"),
+                                        vec![Id::from("index").into()].into(),
+                                    )
+                                    .into(),
+                                ),
+                            )
+                                .into(),
+                        ),
+                        Statement::new_let_var(
+                            Id::from("index"),
+                            (Id::from("index").into(), Op::Plus(IntConst::one().into())).into(),
+                        ),
+                    ]
+                    .into(),
+                )),
+            ),
+        ];
         assert_tokens(cases, token_result);
     }
 }

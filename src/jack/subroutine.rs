@@ -1,3 +1,4 @@
+use std::fmt::Display;
 use std::slice::Iter;
 
 use crate::parse::*;
@@ -15,6 +16,16 @@ pub enum SubroutineKind {
     Function,
     Method,
 }
+impl SubroutineKind {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::Constructor => "constructor",
+            Self::Function => "function",
+            Self::Method => "method",
+        }
+    }
+}
+
 impl<'a> Parses<'a> for SubroutineKind {
     type Input = &'a [Token];
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {
@@ -26,6 +37,12 @@ impl<'a> Parses<'a> for SubroutineKind {
             ),
         )
         .parse(input)
+    }
+}
+
+impl Display for SubroutineKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
     }
 }
 
@@ -75,6 +92,7 @@ impl SubroutineParameter {
         &self.var_name
     }
 }
+
 impl<'a> Parses<'a> for SubroutineParameter {
     type Input = &'a [Token];
     fn parse_into(input: Self::Input) -> ParseResult<'a, Self::Input, Self> {

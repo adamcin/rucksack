@@ -122,6 +122,10 @@ impl Class {
     pub fn subs(&self) -> &[SubroutineDec] {
         self.subs.as_slice()
     }
+
+    pub fn sub(&self, name: &Id) -> Option<&SubroutineDec> {
+        self.subs.iter().find(|v| v.name() == name)
+    }
 }
 impl<'a> Parses<'a> for Class {
     type Input = &'a [Token];

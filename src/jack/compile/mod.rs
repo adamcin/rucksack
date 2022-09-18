@@ -24,8 +24,8 @@ pub struct Compiler {}
 
 impl Compiler {
     pub fn compile(&self, classes: Vec<Class>) -> Result<Vec<VMParsed>, Error> {
-        let class_path = vec![Api::os_classes(), classes.to_vec()].concat();
-        let api = Api::new(class_path.as_slice());
+        let api = Api::new(classes.as_slice())
+            .map_err(|err| err_invalid_input(format!("api compile error {}", err)))?;
         classes
             .into_iter()
             .map(|class| {
@@ -69,6 +69,8 @@ impl JackCompiler {
 #[cfg(test)]
 mod tests {
 
+    use std::{io::Error, path::PathBuf};
+
     use crate::jack::compile::JackCompiler;
 
     #[test]
@@ -91,5 +93,92 @@ mod tests {
             println!("compile_11 error: {:?}", error);
         }
         assert!(&result.is_ok());
+    }
+
+    #[test]
+    fn compile_12() {
+        let dirs: Vec<_> = vec!["data/12"]
+            .iter()
+            .cloned()
+            .map(|s| s.to_owned())
+            .collect();
+
+        let result = JackCompiler::do_main(dirs.as_slice());
+        if let Err(error) = &result {
+            println!("compile_11 error: {:?}", error);
+        }
+        assert!(&result.is_ok());
+    }
+
+    fn copy_class_to_test_dir(test_dir: &str, filename: &str) -> Result<(), Error> {
+        let mut dest_file = PathBuf::from(test_dir);
+        let mut src_file: PathBuf = dest_file.parent().unwrap().into();
+        src_file.push(filename);
+        dest_file.push(filename);
+        std::fs::copy(src_file, dest_file).map(|_| ())
+    }
+
+    #[test]
+    fn compile_12_array() -> Result<(), Error> {
+        let dir = "data/12/ArrayTest";
+        copy_class_to_test_dir(dir, "Array.jack")?;
+        JackCompiler::do_main(&[dir.to_owned()])?;
+        Ok(())
+    }
+
+    #[test]
+    fn compile_12_keyboard() -> Result<(), Error> {
+        let dir = "data/12/KeyboardTest";
+        copy_class_to_test_dir(dir, "Keyboard.jack")?;
+        JackCompiler::do_main(&[dir.to_owned()])?;
+        Ok(())
+    }
+
+    #[test]
+    fn compile_12_math() -> Result<(), Error> {
+        let dir = "data/12/MathTest";
+        copy_class_to_test_dir(dir, "Math.jack")?;
+        JackCompiler::do_main(&[dir.to_owned()])?;
+        Ok(())
+    }
+
+    #[test]
+    fn compile_12_memory() -> Result<(), Error> {
+        let dir = "data/12/MemoryTest";
+        copy_class_to_test_dir(dir, "Memory.jack")?;
+        JackCompiler::do_main(&[dir.to_owned()])?;
+        Ok(())
+    }
+
+    #[test]
+    fn compile_12_output() -> Result<(), Error> {
+        let dir = "data/12/OutputTest";
+        copy_class_to_test_dir(dir, "Output.jack")?;
+        JackCompiler::do_main(&[dir.to_owned()])?;
+        Ok(())
+    }
+
+    #[test]
+    fn compile_12_screen() -> Result<(), Error> {
+        let dir = "data/12/ScreenTest";
+        copy_class_to_test_dir(dir, "Screen.jack")?;
+        JackCompiler::do_main(&[dir.to_owned()])?;
+        Ok(())
+    }
+
+    #[test]
+    fn compile_12_string() -> Result<(), Error> {
+        let dir = "data/12/StringTest";
+        copy_class_to_test_dir(dir, "String.jack")?;
+        JackCompiler::do_main(&[dir.to_owned()])?;
+        Ok(())
+    }
+
+    #[test]
+    fn compile_12_sys() -> Result<(), Error> {
+        let dir = "data/12/SysTest";
+        copy_class_to_test_dir(dir, "Sys.jack")?;
+        JackCompiler::do_main(&[dir.to_owned()])?;
+        Ok(())
     }
 }

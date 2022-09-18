@@ -65,9 +65,10 @@ fn ensure_returns(
         match (sub_kind, return_type) {
             (SubroutineKind::Constructor, _) => Ok(stmts.append(Statement::new_return_this())),
             (_, ReturnType::Void) => Ok(stmts.append(Statement::new_return_void())),
-            (_, ReturnType::Returns(typa)) => {
-                Err(format!("subroutine must return a value of type {:?}", typa))
-            }
+            (_, ReturnType::Returns(typa)) => Err(format!(
+                "subroutine of kind {:?} must return a value of type {:?}",
+                sub_kind, typa
+            )),
         }
     } else {
         Ok(stmts.clone())
@@ -126,13 +127,34 @@ impl Branch {
         }
     }
 
+    fn as_continuing(&self) -> Self {
+        match self {
+            Self::Returns(returns) => Self::Splits(*returns),
+            _ => *self,
+        }
+    }
+
     fn continues(&self) -> bool {
         !matches!(self, Self::Returns(..))
     }
 
-    fn coalesce(&self, other: &Self) -> Result<Self, CompileError> {
+    fn coalesce_sequence(&self, other: &Self) -> Result<Self, CompileError> {
         match (self, other) {
             (Self::Continues, other) | (other, Self::Continues) => Ok(*other),
+            (Self::Splits(ltype), Self::Splits(rtype)) => {
+                combine_types(ltype, rtype).map(Self::Splits)
+            }
+            (Self::Returns(ltype), Self::Splits(rtype))
+            | (Self::Splits(ltype), Self::Returns(rtype))
+            | (Self::Returns(ltype), Self::Returns(rtype)) => {
+                combine_types(ltype, rtype).map(Self::Returns)
+            }
+        }
+    }
+
+    fn coalesce_peers(&self, other: &Self) -> Result<Self, CompileError> {
+        match (self, other) {
+            (Self::Continues, other) | (other, Self::Continues) => Ok(other.as_continuing()),
             (Self::Returns(ltype), Self::Returns(rtype)) => {
                 combine_types(ltype, rtype).map(Self::Returns)
             }
@@ -155,7 +177,7 @@ impl Branch {
                         Self::Continues => Self::resolve(stmt, sub_vars),
                         Self::Returns(..) => Err(format!("unreachable statment {:?}", stmt)),
                         Self::Splits(..) => Self::resolve(stmt, sub_vars).and_then(|rbranch| {
-                            last.coalesce(&rbranch).map_err(|err| {
+                            last.coalesce_sequence(&rbranch).map_err(|err| {
                                 format!(
                                     "block returns different types. error: {:?}, statement: {:?}",
                                     err, stmt
@@ -179,7 +201,7 @@ impl Branch {
                 }),
             Statement::If(_, if_stmts, elze_stmts) => {
                 Self::resolve_all(if_stmts.as_ref(), sub_vars)?
-                    .coalesce(
+                    .coalesce_peers(
                         elze_stmts
                             .as_ref()
                             .as_ref()
