@@ -14,7 +14,12 @@ class Memory {
     /** Initializes the class. */
     function void init() {
         let freeList = 2048;
-        let freeList[0] = 16384 - (2048 + 2);
+        let freeList[0] = 16384 - 2048;
+        let freeList[1] = 0;
+    }
+
+    function void oom() {
+        do Sys.error(42);
     }
 
     /** Returns the RAM value at the given address. */
@@ -31,15 +36,84 @@ class Memory {
         let m[0] = value;
     }
 
+    function Array findLeaf(Array inFree) {
+        var Array next;
+        let next = inFree[1];
+        if (next = 0) {
+            return inFree;
+        } else {
+            return Memory.findLeaf(next);
+        }
+    }
+
+    function Array findBestFree(int minSize, Array inFree, Array bestFree, int bestSize) {
+        var int mySize;
+        var Array next;
+        if (inFree = 0) {
+            return inFree;
+        }
+        let mySize = inFree[0];
+        let next = inFree[1];
+        if (next > 0) {
+            if (~(mySize < (minSize + 2)) & (~(mySize > bestSize) | (bestSize = 0))) {
+                return Memory.findBestFree(minSize, next, inFree, mySize);
+            } else {
+                return Memory.findBestFree(minSize, next, bestFree, bestSize);
+            }
+        } else {
+            if (~(mySize < (minSize + 2)) & (~(mySize > bestSize) | (bestSize = 0))) {
+                return inFree;
+            } else {
+                return bestFree;
+            }
+        }
+    }
+
+    function Array findFirstFree(int minSize, Array inFree) {
+        var int mySize;
+        var Array next;
+        if (inFree = 0) {
+            return inFree;
+        }
+        let mySize = inFree[0];
+        let next = inFree[1];
+        
+        if (~(mySize < (minSize + 2))) {
+            return inFree;
+        } else {
+            if (next > 0) {
+                return Memory.findFirstFree(minSize, next);
+            }
+        }
+        return 0;
+    }
+
     /** Finds an available RAM block of the given size and returns
      *  a reference to its base address. */
     function int alloc(int size) {
+        var Array found, segmentSize, blockSize, newSize;
+        let blockSize = size + 1;
+        let found = findBestFree(blockSize, freeList, 0, 0);
+        if (found = 0) {
+            do Memory.oom();
+        }
+
+        let segmentSize = found[0];
+        let newSize = segmentSize - blockSize;
+        let found[newSize] = blockSize;
+        let found[0] = newSize;
         
-        return 2050;
+        return found + newSize + 1;
     }
 
     /** De-allocates the given object (cast as an array) by making
      *  it available for future allocations. */
     function void deAlloc(Array o) {
+        var Array leaf;
+
+        let leaf = findLeaf(freeList);
+
+        let o[0] = 0;
+        let leaf[1] = o - 1;
     }    
 }

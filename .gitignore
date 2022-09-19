@@ -1,3 +1,5 @@
 target/
 data/*.hack
+data/*.out
+compare/.out
 .DS_Store
